@@ -663,6 +663,7 @@ function updateClockPreview(){
  var isBold=gc('boldText')||(fontSt==='1');
  var showSec=gc('showSeconds');
  var showDt=gc('showDate');
+ var city=(gv('weatherCity')||'MOSCOW').toUpperCase();
 
  if(showSec && timeSz > 5) timeSz = 5;
 
@@ -691,6 +692,9 @@ function updateClockPreview(){
 
  if(theme===0){
   var yOff=(timeSz>=7)?36:(timeSz===6?44:(timeSz===5?52:62));
+  if (fontSt === '2') {
+   ctx.strokeStyle='rgba(24,198,198,0.3)';ctx.lineWidth=2;ctx.strokeRect(8,yOff-4,224,timeSz*8+8);
+  }
   drawCentered(timeStr,yOff,timeSz,tc);
   if(showDt) {
    var dateY=(timeSz>=6)?168:142;
@@ -702,7 +706,7 @@ function updateClockPreview(){
  } else if(theme===1){
   ctx.fillStyle='rgba(1,134,200,0.2)';ctx.fillRect(8,8,224,120);
   ctx.strokeStyle='#1C17';ctx.strokeRect(8,8,224,120);
-  drawText('MOSCOW',18,18,2,ac);
+  drawText(city,18,18,2,ac);
   drawText('+22.5C',18,46,4,tc);
   drawText('CLEAR SKY',18,94,2,dc);
   ctx.fillStyle='rgba(8,201,150,0.2)';ctx.fillRect(8,134,224,98);
@@ -716,13 +720,13 @@ function updateClockPreview(){
   if(showDt) drawCentered(dateStr,98,dateSz,dc);
   ctx.fillStyle='rgba(8,66,100,0.2)';ctx.fillRect(8,144,224,88);
   ctx.strokeStyle='#2126';ctx.strokeRect(8,144,224,88);
-  drawText('MOSCOW',18,160,2,dc);
+  drawText(city,18,160,2,dc);
   drawText('+22.5C',135,155,3,ac);
   drawText('LIVE WEATHER',18,198,1,ac);
  } else {
   ctx.fillStyle='rgba(9,68,120,0.2)';ctx.fillRect(6,6,228,72);
   ctx.strokeStyle='#1390';ctx.strokeRect(6,6,228,72);
-  drawText('TODAY',16,16,2,tc);
+  drawText('TODAY ('+city+')',16,16,2,tc);
   drawText('+22.5C',135,12,3,ac);
   drawText('CLEAR SKY',16,45,2,dc);
   ctx.fillStyle='rgba(16,132,200,0.2)';ctx.fillRect(6,84,228,72);

@@ -9,6 +9,74 @@
 
 ClockMode g_clockMode;
 
+static void draw7SegmentDigit(int x, int y, int w, int h, char ch, uint16_t color, uint16_t dimColor) {
+  Arduino_GFX* g = gfxDev();
+  if (!g) return;
+
+  if (ch == ':') {
+    int r = max(2, w / 6);
+    g->fillCircle(x + w / 2, y + h / 3, r, color);
+    g->fillCircle(x + w / 2, y + (2 * h) / 3, r, color);
+    return;
+  }
+
+  if (ch < '0' || ch > '9') return;
+
+  static const uint8_t segs[10] = {
+    0x3F, // 0: A B C D E F
+    0x06, // 1: B C
+    0x5B, // 2: A B D E G
+    0x4F, // 3: A B C D G
+    0x66, // 4: B C F G
+    0x6D, // 5: A C D F G
+    0x7D, // 6: A C D E F G
+    0x07, // 7: A B C
+    0x7F, // 8: A B C D E F G
+    0x6F  // 9: A B C D F G
+  };
+
+  uint8_t mask = segs[ch - '0'];
+  int t = max(2, w / 6);
+
+  auto drawSeg = [&](bool lit, int sx, int sy, int sw, int sh) {
+    uint16_t c = lit ? color : dimColor;
+    if (c != 0x0000) {
+      g->fillRoundRect(sx, sy, sw, sh, min(sw, sh) / 2, c);
+    }
+  };
+
+  // A (top)
+  drawSeg(mask & 0x01, x + t, y, w - 2 * t, t);
+  // B (top-right)
+  drawSeg(mask & 0x02, x + w - t, y + t, t, (h / 2) - t);
+  // C (bottom-right)
+  drawSeg(mask & 0x04, x + w - t, y + (h / 2) + (t / 2), t, (h / 2) - t);
+  // D (bottom)
+  drawSeg(mask & 0x08, x + t, y + h - t, w - 2 * t, t);
+  // E (bottom-left)
+  drawSeg(mask & 0x10, x, y + (h / 2) + (t / 2), t, (h / 2) - t);
+  // F (top-left)
+  drawSeg(mask & 0x20, x, y + t, t, (h / 2) - t);
+  // G (middle)
+  drawSeg(mask & 0x40, x + t, y + (h / 2) - (t / 2), w - 2 * t, t);
+}
+
+static void draw7SegmentString(const char* txt, int y, uint8_t sz, uint16_t color, uint16_t dimColor) {
+  if (!txt || !txt[0]) return;
+  int len = strlen(txt);
+  int digitW = sz * 5 + 2;
+  int digitH = sz * 8 + 4;
+  int spacing = max(2, (int)sz);
+  int totalW = len * digitW + (len - 1) * spacing;
+  int startX = (240 - totalW) / 2;
+  if (startX < 0) startX = 0;
+
+  for (int i = 0; i < len; i++) {
+    int dx = startX + i * (digitW + spacing);
+    draw7SegmentDigit(dx, y, digitW, digitH, txt[i], color, dimColor);
+  }
+}
+
 void ClockMode::begin(const Settings& s) {
   m_weather.valid = false;
   m_nextFetchMs = millis();
@@ -189,8 +257,8 @@ void ClockMode::render(const Settings& s) {
   bool isBold = s.clock.boldText || (fontSt == 1) || (fontSt == 3);
   auto drawT = [&](const char* txt, int y, uint8_t sz, uint16_t color) {
     if (fontSt == 2) {
-      // Digital LCD 7-Segment style: bracketed LCD feel
-      gfxDrawCentered(txt, y, sz, color);
+      // Digital LCD 7-Segment vector rendering
+      draw7SegmentString(txt, y, sz, color, 0x1084);
     } else if (isBold) {
       gfxDrawCenteredBold(txt, y, sz, color);
     } else {
