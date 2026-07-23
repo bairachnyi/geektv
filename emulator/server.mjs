@@ -1206,7 +1206,7 @@ const deviceServer = http.createServer(async (req, res) => {
       return res.end(JSON.stringify(deviceConfig, null, 2));
     }
     if (req.method === 'POST' && req.url === '/api/import') { saveDeviceConfig(await readBody(req)); return json(res, 200, { ok: true, reboot: true }); }
-    if (req.method === 'GET' && req.url === '/api/checkupdate') return json(res, 200, { ok: true, current: '0.6.0', latest: '0.6.0', newer: false });
+    if (req.method === 'GET' && req.url === '/api/checkupdate') return json(res, 200, { ok: true, current: '0.7.0', latest: '0.7.0', newer: false });
     if (req.method === 'POST' && ['/api/reboot', '/api/refresh', '/api/usage', '/api/ai-usage'].includes(req.url)) { record('info', `device${req.url.replace('/api', '').replaceAll('/', '.')}`, { message: 'Simulated locally' }); return json(res, 200, { ok: true, simulated: true }); }
     if (req.method === 'POST' && req.url === '/api/factory') { deviceConfig = structuredClone(DEFAULT_DEVICE_CONFIG); saveDeviceConfig({}); record('warn', 'device.factory_reset', { message: 'Local emulator defaults restored' }); return json(res, 200, { ok: true, reboot: true, simulated: true }); }
     if (req.method === 'POST' && req.url === '/api/selfupdate') { record('warn', 'device.self_update.skipped', { message: 'Firmware update is disabled in the local emulator' }); return json(res, 200, { ok: true, simulated: true }); }

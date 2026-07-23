@@ -12,7 +12,7 @@
 // Firmware identity
 // ---------------------------------------------------------------------------
 #define FW_NAME     "geektv"
-#define FW_VERSION  "0.6.0"
+#define FW_VERSION  "0.7.0"
 
 // Project / update references (shown in the web UI; used by the GitHub self-update)
 #define REPO_URL      "https://github.com/bairachnyi/geektv"
