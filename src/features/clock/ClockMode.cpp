@@ -190,24 +190,24 @@ void ClockMode::render(const Settings& s) {
 
   uint8_t theme = s.clock.theme;
 
-  // Resolve font scale: 0 = theme default, 1-5 = user override
-  uint8_t timeSz = s.clock.fontScale > 0 ? s.clock.fontScale : (theme == 0 ? (s.clock.showSeconds ? 4 : 5) : (theme == 2 ? 5 : 4));
-  uint8_t dateSz = s.clock.fontScale > 0 ? max((uint8_t)1, (uint8_t)(timeSz > 2 ? 2 : 1))
-                                      : (theme == 0 ? 2 : 2);
+  // Resolve font scale: timeScale (1..7) and dateScale (1..4)
+  uint8_t timeSz = s.clock.timeScale > 0 ? s.clock.timeScale : (s.clock.showSeconds ? 4 : 5);
+  uint8_t dateSz = s.clock.dateScale > 0 ? s.clock.dateScale : 2;
 
   uint16_t tc = s.clock.timeColor;
   uint16_t dc = s.clock.dateColor;
   uint16_t ac = s.clock.accentColor;
 
-  // Helper: draw text bold or normal based on settings
+  // Helper: draw text according to fontStyle & boldText
+  bool isBold = s.clock.boldText || (s.clock.fontStyle == 1);
   auto drawT = [&](const char* txt, int y, uint8_t sz, uint16_t color) {
-    if (s.clock.boldText) gfxDrawCenteredBold(txt, y, sz, color);
+    if (isBold) gfxDrawCenteredBold(txt, y, sz, color);
     else gfxDrawCentered(txt, y, sz, color);
   };
   auto drawL = [&](const char* txt, int x, int y, uint8_t sz, uint16_t color) {
     Arduino_GFX* g = gfxDev();
     if (!g) return;
-    if (s.clock.boldText) gfxPrintBold(g, x, y, txt, color, sz);
+    if (isBold) gfxPrintBold(g, x, y, txt, color, sz);
     else gfxPrint(x, y, txt, color, sz);
   };
 
@@ -215,16 +215,17 @@ void ClockMode::render(const Settings& s) {
 
   if (theme == 0) {
     // Theme 0: Giant Fullscreen Clock
-    int yOff = s.clock.showSeconds ? 65 : 55;
+    int yOff = (timeSz >= 7) ? 36 : (timeSz == 6 ? 44 : (timeSz == 5 ? 52 : 62));
     drawT(timeStr, yOff, timeSz, tc);
 
     if (s.clock.showDate) {
-      gfxFillRoundRect(16, 140, 208, 32, 8, 0x18C6);
-      gfxDrawRoundRect(16, 140, 208, 32, 8, dc);
-      drawT(dateStr, 148, dateSz, dc);
+      int dateY = (timeSz >= 6) ? 168 : 142;
+      gfxFillRoundRect(10, dateY, 220, 32, 8, 0x18C6);
+      gfxDrawRoundRect(10, dateY, 220, 32, 8, dc);
+      drawT(dateStr, dateY + 8, dateSz, dc);
     }
 
-    drawT(ipBuf, 215, 1, ac);
+    drawT(ipBuf, 218, 1, ac);
   } else if (theme == 1) {
     // Theme 1: Weather & Clock Station
     gfxFillRoundRect(8, 8, 224, 120, 10, 0x0186);

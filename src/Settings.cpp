@@ -221,8 +221,20 @@ void ClockSettings::setDefaults() {
   dateColor     = 0xFFB6;  // amber
   accentColor   = 0x58A9;  // muted blue
   bgColor       = 0x0000;  // pure black
-  fontScale     = 0;       // 0 = theme default
+  timeScale     = 5;       // 1..7 (5=30x40, 6=36x48, 7=42x56)
+  dateScale     = 2;       // 1..4
+  fontStyle     = 0;       // 0=Sans, 1=Bold, 2=Digital, 3=Modern
+  fontScale     = 5;
   boldText      = false;
+}
+
+static String rgb565ToHexStr(uint16_t c) {
+  uint8_t r = (c >> 11) & 0x1F; r = (r * 255 + 15) / 31;
+  uint8_t g = (c >> 5) & 0x3F;  g = (g * 255 + 31) / 63;
+  uint8_t b = c & 0x1F;         b = (b * 255 + 15) / 31;
+  char hex[8];
+  snprintf(hex, sizeof(hex), "#%02X%02X%02X", r, g, b);
+  return String(hex);
 }
 
 void ClockSettings::toJson(JsonObject o) const {
@@ -242,14 +254,15 @@ void ClockSettings::toJson(JsonObject o) const {
   o["weatherUnits"]  = weatherUnits;
   o["weatherPollSec"]= weatherPollSec;
 
-  // Colors as 4-digit hex strings for the web UI (e.g. "39E7")
-  char buf[8];
-  snprintf(buf, sizeof(buf), "%04X", timeColor);   o["timeColor"]   = buf;
-  snprintf(buf, sizeof(buf), "%04X", dateColor);   o["dateColor"]   = buf;
-  snprintf(buf, sizeof(buf), "%04X", accentColor); o["accentColor"] = buf;
-  snprintf(buf, sizeof(buf), "%04X", bgColor);     o["bgColor"]     = buf;
-  o["fontScale"] = fontScale;
-  o["boldText"] = boldText;
+  o["timeColor"]   = rgb565ToHexStr(timeColor);
+  o["dateColor"]   = rgb565ToHexStr(dateColor);
+  o["accentColor"] = rgb565ToHexStr(accentColor);
+  o["bgColor"]     = rgb565ToHexStr(bgColor);
+  o["timeScale"]   = timeScale;
+  o["dateScale"]   = dateScale;
+  o["fontStyle"]   = fontStyle;
+  o["fontScale"]   = timeScale;
+  o["boldText"]    = boldText;
 }
 
 static uint16_t parseColorHex(const char* str, uint16_t defVal) {
@@ -287,8 +300,12 @@ void ClockSettings::fromJson(JsonObjectConst o) {
   if (o["dateColor"].is<const char*>())   dateColor   = parseColorHex(o["dateColor"].as<const char*>(), 0xFFB6);
   if (o["accentColor"].is<const char*>()) accentColor = parseColorHex(o["accentColor"].as<const char*>(), 0x58A9);
   if (o["bgColor"].is<const char*>())     bgColor     = parseColorHex(o["bgColor"].as<const char*>(), 0x0000);
-  if (o["fontScale"].is<int>()) fontScale = (uint8_t)constrain((int)o["fontScale"], 0, 5);
+  if (o["timeScale"].is<int>()) timeScale = (uint8_t)constrain((int)o["timeScale"], 1, 7);
+  else if (o["fontScale"].is<int>()) timeScale = (uint8_t)constrain((int)o["fontScale"], 1, 7);
+  if (o["dateScale"].is<int>()) dateScale = (uint8_t)constrain((int)o["dateScale"], 1, 4);
+  if (o["fontStyle"].is<int>()) fontStyle = (uint8_t)constrain((int)o["fontStyle"], 0, 3);
   if (o["boldText"].is<bool>()) boldText = o["boldText"];
+  fontScale = timeScale;
 }
 
 // ===========================================================================

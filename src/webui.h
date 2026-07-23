@@ -193,25 +193,33 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
       <option value="2">Modern Status Bar (OLED Glass)</option>
       <option value="3">3-Day Weather Forecast Breakdown</option>
      </select>
-     <label>Font size</label>
-     <select id="fontScale">
-      <option value="0">Theme default</option>
-      <option value="1">Small</option>
-      <option value="2">Medium</option>
-      <option value="3">Large</option>
-      <option value="4">Extra Large</option>
-      <option value="5">Giant</option>
+     <label>Font Style &amp; Typography</label>
+     <select id="fontStyle" onchange="pvRestart();updateClockPreview()">
+      <option value="0">Default System Sans (Crisp Pixel)</option>
+      <option value="1">Bold Heavy Stroke (Thick Lines)</option>
+      <option value="2">Digital LCD Segment (7-Segment)</option>
+      <option value="3">Modern Minimalist</option>
      </select>
-     <div class="chk"><input id="boldText" type="checkbox"><label>Bold text (thicker, smoother lines)</label></div>
+     <div class="row" style="margin-top:10px">
+      <div>
+       <label>Time Digits Size: <b id="timeScaleVal">5</b></label>
+       <input id="timeScale" type="range" min="1" max="7" value="5" oninput="$('timeScaleVal').textContent=this.value;pvRestart();updateClockPreview()">
+      </div>
+      <div>
+       <label>Date &amp; Text Size: <b id="dateScaleVal">2</b></label>
+       <input id="dateScale" type="range" min="1" max="4" value="2" oninput="$('dateScaleVal').textContent=this.value;pvRestart();updateClockPreview()">
+      </div>
+     </div>
+     <div class="chk" style="margin-top:8px"><input id="boldText" type="checkbox" onchange="pvRestart();updateClockPreview()"><label>Bold text (thicker, smoother lines)</label></div>
     </div>
     <div class="card"><h2>Colors</h2>
      <div class="row">
-      <div><label>Time color</label><input id="timeColor" type="color" value="#39E7"></div>
-      <div><label>Date color</label><input id="dateColor" type="color" value="#FFB6"></div>
+      <div><label>Time color</label><input id="timeColor" type="color" value="#39e7ff" onchange="pvRestart();updateClockPreview()"></div>
+      <div><label>Date color</label><input id="dateColor" type="color" value="#ffb6c1" onchange="pvRestart();updateClockPreview()"></div>
      </div>
      <div class="row">
-      <div><label>Accent color</label><input id="accentColor" type="color" value="#58A9"></div>
-      <div><label>Background</label><input id="bgColor" type="color" value="#0000"></div>
+      <div><label>Accent color</label><input id="accentColor" type="color" value="#58a9ff" onchange="pvRestart();updateClockPreview()"></div>
+      <div><label>Background</label><input id="bgColor" type="color" value="#000000" onchange="pvRestart();updateClockPreview()"></div>
      </div>
      <div style="margin-top:10px">
       <button class="btn sec" onclick="resetClockColors()">Reset to defaults</button>
@@ -581,13 +589,21 @@ function loadConfig(){return j('/api/config').then(function(c){C=c;
  sc('format24h',ck.format24h!==false); sc('showSeconds',!!ck.showSeconds); sc('showDate',ck.showDate!==false);
  sv('clockTheme',ck.theme||0); sv('weatherCity',ck.weatherCity||'Moscow'); sv('weatherApiKey',ck.weatherApiKey||'');
   sv('weatherUnits',ck.weatherUnits||'c'); sv('weatherPollSec',ck.weatherPollSec||900);
-  // Colors (RGB565 -> hex)
-  sv('timeColor',rgb565ToHex(ck.timeColor!=null?ck.timeColor:0x39E7));
-  sv('dateColor',rgb565ToHex(ck.dateColor!=null?ck.dateColor:0xFFB6));
-  sv('accentColor',rgb565ToHex(ck.accentColor!=null?ck.accentColor:0x58A9));
-  sv('bgColor',rgb565ToHex(ck.bgColor!=null?ck.bgColor:0x0000));
-  sv('fontScale',ck.fontScale||0);
-  sc('boldText',!!ck.boldText);
+  var formatHex = function(v, def) {
+    if (!v) return def;
+    if (typeof v === 'string') return v.startsWith('#') ? v : ('#' + v);
+    return rgb565ToHex(v);
+  };
+  sv('timeColor', formatHex(ck.timeColor, '#39e7ff'));
+  sv('dateColor', formatHex(ck.dateColor, '#ffb6c1'));
+  sv('accentColor', formatHex(ck.accentColor, '#58a9ff'));
+  sv('bgColor', formatHex(ck.bgColor, '#000000'));
+  sv('timeScale', ck.timeScale || ck.fontScale || 5);
+  $('timeScaleVal') && ($('timeScaleVal').textContent = ck.timeScale || ck.fontScale || 5);
+  sv('dateScale', ck.dateScale || 2);
+  $('dateScaleVal') && ($('dateScaleVal').textContent = ck.dateScale || 2);
+  sv('fontStyle', ck.fontStyle || 0);
+  sc('boldText', !!ck.boldText);
   updateClockPreview();
   // gallery slice
  var gl=c.gallery||{}; sv('galleryRotateSec',gl.rotateSec||10); sc('galleryRandom',!!gl.randomOrder);
@@ -706,16 +722,16 @@ function updateClockPreview(){
  }
 }
 function resetClockColors(){
- sv('timeColor','#39E7');sv('dateColor','#FFB6');sv('accentColor','#58A9');sv('bgColor','#0000');
+ sv('timeColor','#39e7ff');sv('dateColor','#ffb6c1');sv('accentColor','#58a9ff');sv('bgColor','#000000');
  updateClockPreview();
 }
 
 // Listen for color/font/theme changes to update preview
 document.addEventListener('input',function(e){
- if(e.target.id&&['timeColor','dateColor','accentColor','bgColor'].indexOf(e.target.id)>=0) updateClockPreview();
+ if(e.target.id&&['timeColor','dateColor','accentColor','bgColor','timeScale','dateScale'].indexOf(e.target.id)>=0) updateClockPreview();
 });
 document.addEventListener('change',function(e){
- if(e.target.id&&['clockTheme','fontScale','showSeconds','showDate','boldText'].indexOf(e.target.id)>=0) updateClockPreview();
+ if(e.target.id&&['clockTheme','fontStyle','timeScale','dateScale','showSeconds','showDate','boldText'].indexOf(e.target.id)>=0) updateClockPreview();
 });
 function symHintFor(v){var h=$('symHint');if(!h)return;
  h.innerHTML=(v==='cash'
@@ -794,13 +810,16 @@ function collect(){
   nightEnd:gv('nightEnd')||'07:00',nightLevel:parseInt(gv('nightLevel'))||0,
   format24h:gc('format24h'),showSeconds:gc('showSeconds'),showDate:gc('showDate'),
   theme:parseInt(gv('clockTheme'))||0,weatherCity:gv('weatherCity'),weatherApiKey:gv('weatherApiKey'),
-   weatherUnits:gv('weatherUnits')||'c',weatherPollSec:parseInt(gv('weatherPollSec'))||900,
-    timeColor:rgb565ToHex(hexToRgb565(gv('timeColor')||'#39E7')).replace('#',''),
-    dateColor:rgb565ToHex(hexToRgb565(gv('dateColor')||'#FFB6')).replace('#',''),
-    accentColor:rgb565ToHex(hexToRgb565(gv('accentColor')||'#58A9')).replace('#',''),
-    bgColor:rgb565ToHex(hexToRgb565(gv('bgColor')||'#0000')).replace('#',''),
-   fontScale:parseInt(gv('fontScale'))||0,
-   boldText:gc('boldText')};}
+  weatherUnits:gv('weatherUnits')||'c',weatherPollSec:parseInt(gv('weatherPollSec'))||900,
+  timeColor:gv('timeColor')||'#39e7ff',
+  dateColor:gv('dateColor')||'#ffb6c1',
+  accentColor:gv('accentColor')||'#58a9ff',
+  bgColor:gv('bgColor')||'#000000',
+  timeScale:parseInt(gv('timeScale'))||5,
+  dateScale:parseInt(gv('dateScale'))||2,
+  fontStyle:parseInt(gv('fontStyle'))||0,
+  fontScale:parseInt(gv('timeScale'))||5,
+  boldText:gc('boldText')};}
  // gallery slice
  if($('galleryRotateSec')){
   o.gallery={rotateSec:parseInt(gv('galleryRotateSec'))||10,randomOrder:gc('galleryRandom')};

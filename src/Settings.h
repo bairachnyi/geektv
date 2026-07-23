@@ -117,7 +117,10 @@ struct ClockSettings {
   uint16_t bgColor;       // background tint (0 = pure black)
 
   // Font
-  uint8_t  fontScale;     // 1..5, text size multiplier for time
+  uint8_t  timeScale;     // 1..7 (1=small, 5=giant 30x40, 6=super giant 36x48, 7=screen fill 42x56)
+  uint8_t  dateScale;     // 1..4
+  uint8_t  fontStyle;     // 0=Sans, 1=Bold, 2=Digital Segment, 3=Modern Minimalist
+  uint8_t  fontScale;     // legacy alias (timeScale)
   bool     boldText;      // true = bold effect (double-strike rendering)
 
   void setDefaults();
