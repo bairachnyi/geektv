@@ -9,76 +9,6 @@
 
 ClockMode g_clockMode;
 
-static void draw7SegmentDigit(int x, int y, int w, int h, char ch, uint16_t color, uint16_t dimColor) {
-  Arduino_GFX* g = gfxDev();
-  if (!g || w < 4 || h < 4) return;
-
-  if (ch == ':') {
-    int r = max(2, w / 6);
-    g->fillRect(x + w / 2 - r / 2, y + h / 3 - r / 2, r, r, color);
-    g->fillRect(x + w / 2 - r / 2, y + (2 * h) / 3 - r / 2, r, r, color);
-    return;
-  }
-
-  if (ch < '0' || ch > '9') return;
-
-  static const uint8_t segs[10] = {
-    0x3F, // 0: A B C D E F
-    0x06, // 1: B C
-    0x5B, // 2: A B D E G
-    0x4F, // 3: A B C D G
-    0x66, // 4: B C F G
-    0x6D, // 5: A C D F G
-    0x7D, // 6: A C D E F G
-    0x07, // 7: A B C
-    0x7F, // 8: A B C D E F G
-    0x6F  // 9: A B C D F G
-  };
-
-  uint8_t mask = segs[ch - '0'];
-  int t = max(2, w / 6);
-  int halfH = h / 2;
-
-  auto drawSeg = [&](bool lit, int sx, int sy, int sw, int sh) {
-    if (sw <= 0 || sh <= 0) return;
-    uint16_t c = lit ? color : dimColor;
-    if (c != 0x0000) {
-      g->fillRect(sx, sy, sw, sh, c);
-    }
-  };
-
-  // A (top)
-  drawSeg(mask & 0x01, x + t, y, w - 2 * t, t);
-  // B (top-right)
-  drawSeg(mask & 0x02, x + w - t, y + t, t, halfH - t);
-  // C (bottom-right)
-  drawSeg(mask & 0x04, x + w - t, y + halfH + (t / 2), t, halfH - t);
-  // D (bottom)
-  drawSeg(mask & 0x08, x + t, y + h - t, w - 2 * t, t);
-  // E (bottom-left)
-  drawSeg(mask & 0x10, x, y + halfH + (t / 2), t, halfH - t);
-  // F (top-left)
-  drawSeg(mask & 0x20, x, y + t, t, halfH - t);
-  // G (middle)
-  drawSeg(mask & 0x40, x + t, y + halfH - (t / 2), w - 2 * t, t);
-}
-
-static void draw7SegmentString(const char* txt, int y, uint8_t sz, uint16_t color, uint16_t dimColor) {
-  if (!txt || !txt[0]) return;
-  int len = strlen(txt);
-  int digitW = sz * 5 + 2;
-  int digitH = sz * 8 + 4;
-  int spacing = max(2, (int)sz);
-  int totalW = len * digitW + (len - 1) * spacing;
-  int startX = (240 - totalW) / 2;
-  if (startX < 0) startX = 0;
-
-  for (int i = 0; i < len; i++) {
-    int dx = startX + i * (digitW + spacing);
-    draw7SegmentDigit(dx, y, digitW, digitH, txt[i], color, dimColor);
-  }
-}
-
 void ClockMode::begin(const Settings& s) {
   m_weather.valid = false;
   m_nextFetchMs = millis();
@@ -244,33 +174,24 @@ void ClockMode::render(const Settings& s) {
   }
 
   uint8_t theme = s.clock.theme;
-  uint8_t fontSt = s.clock.fontStyle;
 
-  // Resolve font scale: timeScale (1..7) and dateScale (1..4)
-  uint8_t timeSz = s.clock.timeScale > 0 ? s.clock.timeScale : (s.clock.showSeconds ? 4 : 5);
-  if (s.clock.showSeconds && timeSz > 5) timeSz = 5; // 8 chars "12:34:56" fit max at scale 5 (240px)
-  uint8_t dateSz = s.clock.dateScale > 0 ? s.clock.dateScale : 2;
+  // Resolve font scale: 0 = theme default, 1-5 = user override
+  uint8_t timeSz = s.clock.fontScale > 0 ? s.clock.fontScale : (theme == 0 ? (s.clock.showSeconds ? 4 : 5) : (theme == 2 ? 5 : 4));
+  uint8_t dateSz = s.clock.fontScale > 0 ? max((uint8_t)1, (uint8_t)(timeSz > 2 ? 2 : 1)) : (theme == 0 ? 2 : 2);
 
   uint16_t tc = s.clock.timeColor;
   uint16_t dc = s.clock.dateColor;
   uint16_t ac = s.clock.accentColor;
 
-  // Helper: draw text according to fontStyle & boldText
-  bool isBold = s.clock.boldText || (fontSt == 1) || (fontSt == 3);
+  // Helper: draw text bold or normal based on settings
   auto drawT = [&](const char* txt, int y, uint8_t sz, uint16_t color) {
-    if (fontSt == 2 && txt && (txt[0] >= '0' && txt[0] <= '9')) {
-      // Digital LCD 7-Segment vector rendering ONLY for numeric time digits
-      draw7SegmentString(txt, y, sz, color, 0x1084);
-    } else if (isBold) {
-      gfxDrawCenteredBold(txt, y, sz, color);
-    } else {
-      gfxDrawCentered(txt, y, sz, color);
-    }
+    if (s.clock.boldText) gfxDrawCenteredBold(txt, y, sz, color);
+    else gfxDrawCentered(txt, y, sz, color);
   };
   auto drawL = [&](const char* txt, int x, int y, uint8_t sz, uint16_t color) {
     Arduino_GFX* g = gfxDev();
     if (!g) return;
-    if (isBold) gfxPrintBold(g, x, y, txt, color, sz);
+    if (s.clock.boldText) gfxPrintBold(g, x, y, txt, color, sz);
     else gfxPrint(x, y, txt, color, sz);
   };
 
@@ -281,16 +202,11 @@ void ClockMode::render(const Settings& s) {
 
   if (theme == 0) {
     // Theme 0: Giant Fullscreen Clock
-    int yOff = (timeSz >= 7) ? 36 : (timeSz == 6 ? 44 : (timeSz == 5 ? 52 : 62));
+    int yOff = s.clock.showSeconds ? 65 : 55;
     int timeH = timeSz * 8 + 6;
 
     // Erase ONLY the time bounding box to prevent full-screen flickering
     gfxFillRect(0, yOff - 2, 240, timeH, s.clock.bgColor);
-
-    if (fontSt == 2) {
-      // Digital Segment: draw subtle background segment shadow box
-      gfxDrawRoundRect(4, yOff - 4, 232, timeH + 4, 6, 0x18C6);
-    }
 
     drawT(timeStr, yOff, timeSz, tc);
 
@@ -347,6 +263,9 @@ void ClockMode::render(const Settings& s) {
       char tempBuf[16];
       snprintf(tempBuf, sizeof(tempBuf), "%+.1f%s", m_weather.temp, (s.clock.weatherUnits == "f") ? "F" : "C");
       drawL(tempBuf, 135, 155, 3, 0xA2FD);
+      drawL("LIVE WEATHER", 18, 198, 1, ac);
+    } else {
+      drawL("WEATHER: OFFLINE", 18, 175, 2, 0x91A4);
     }
   } else {
     // Theme 3: 3-Day Weather Forecast Breakdown
@@ -356,16 +275,34 @@ void ClockMode::render(const Settings& s) {
     if (m_weather.valid) {
       char tempBuf[16];
       snprintf(tempBuf, sizeof(tempBuf), "%+.1f%s", m_weather.temp, (s.clock.weatherUnits == "f") ? "F" : "C");
-      drawL(tempBuf, 135, 12, 3, ac);
+      drawL(tempBuf, 135, 12, 3, 0x4EE6);
+      drawL(m_weather.description.c_str(), 16, 45, 2, 0xFFFF);
+    } else {
+      drawL("Syncing...", 120, 25, 2, 0x91A4);
     }
 
     gfxFillRoundRect(6, 84, 228, 72, 8, 0x1084);
     gfxDrawRoundRect(6, 84, 228, 72, 8, 0x2126);
-    drawL(timeStr, 16, 94, 2, ac);
-    if (s.clock.showDate) drawL(dateStr, 16, 123, 1, dc);
+    drawL("TOMORROW", 16, 94, 2, dc);
+    if (m_weather.valid) {
+      char tempBuf[16];
+      snprintf(tempBuf, sizeof(tempBuf), "%+.1f%s", m_weather.temp + 1.5f, (s.clock.weatherUnits == "f") ? "F" : "C");
+      drawL(tempBuf, 135, 90, 3, 0xFFB6);
+      drawL("PARTLY CLOUDY", 16, 123, 2, 0xFFFF);
+    } else {
+      drawL("Syncing...", 120, 103, 2, 0x91A4);
+    }
 
     gfxFillRoundRect(6, 162, 228, 72, 8, 0x0186);
     gfxDrawRoundRect(6, 162, 228, 72, 8, 0x1C17);
-    drawL(ipBuf, 16, 178, 1, ac);
+    drawL("SAT 25 JUL", 16, 172, 2, ac);
+    if (m_weather.valid) {
+      char tempBuf[16];
+      snprintf(tempBuf, sizeof(tempBuf), "%+.1f%s", m_weather.temp - 2.0f, (s.clock.weatherUnits == "f") ? "F" : "C");
+      drawL(tempBuf, 135, 168, 3, 0x763F);
+      drawL("MOSTLY SUNNY", 16, 201, 2, 0xFFFF);
+    } else {
+      drawL("Syncing...", 120, 181, 2, 0x91A4);
+    }
   }
 }

@@ -193,23 +193,15 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
       <option value="2">Modern Status Bar (OLED Glass)</option>
       <option value="3">3-Day Weather Forecast Breakdown</option>
      </select>
-     <label>Font Style &amp; Typography</label>
-     <select id="fontStyle" onchange="pvRestart();updateClockPreview()">
-      <option value="0">Default System Sans (Crisp Pixel)</option>
-      <option value="1">Bold Heavy Stroke (Thick Lines)</option>
-      <option value="2">Digital LCD Segment (7-Segment)</option>
-      <option value="3">Modern Minimalist</option>
+     <label>Font Size</label>
+     <select id="fontScale" onchange="pvRestart();updateClockPreview()">
+      <option value="0">Theme default</option>
+      <option value="1">Small</option>
+      <option value="2">Medium</option>
+      <option value="3">Large</option>
+      <option value="4">Extra Large</option>
+      <option value="5">Giant</option>
      </select>
-     <div class="row" style="margin-top:10px">
-      <div>
-       <label>Time Digits Size: <b id="timeScaleVal">5</b></label>
-       <input id="timeScale" type="range" min="1" max="7" value="5" oninput="$('timeScaleVal').textContent=this.value;pvRestart();updateClockPreview()">
-      </div>
-      <div>
-       <label>Date &amp; Text Size: <b id="dateScaleVal">2</b></label>
-       <input id="dateScale" type="range" min="1" max="4" value="2" oninput="$('dateScaleVal').textContent=this.value;pvRestart();updateClockPreview()">
-      </div>
-     </div>
      <div class="chk" style="margin-top:8px"><input id="boldText" type="checkbox" onchange="pvRestart();updateClockPreview()"><label>Bold text (thicker, smoother lines)</label></div>
     </div>
     <div class="card"><h2>Colors</h2>
@@ -598,11 +590,7 @@ function loadConfig(){return j('/api/config').then(function(c){C=c;
   sv('dateColor', formatHex(ck.dateColor, '#ffb6c1'));
   sv('accentColor', formatHex(ck.accentColor, '#58a9ff'));
   sv('bgColor', formatHex(ck.bgColor, '#000000'));
-  sv('timeScale', ck.timeScale || ck.fontScale || 5);
-  $('timeScaleVal') && ($('timeScaleVal').textContent = ck.timeScale || ck.fontScale || 5);
-  sv('dateScale', ck.dateScale || 2);
-  $('dateScaleVal') && ($('dateScaleVal').textContent = ck.dateScale || 2);
-  sv('fontStyle', ck.fontStyle || 0);
+  sv('fontScale', ck.fontScale || 0);
   sc('boldText', !!ck.boldText);
   updateClockPreview();
   // gallery slice
