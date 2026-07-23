@@ -11,12 +11,12 @@ ClockMode g_clockMode;
 
 static void draw7SegmentDigit(int x, int y, int w, int h, char ch, uint16_t color, uint16_t dimColor) {
   Arduino_GFX* g = gfxDev();
-  if (!g) return;
+  if (!g || w < 4 || h < 4) return;
 
   if (ch == ':') {
     int r = max(2, w / 6);
-    g->fillCircle(x + w / 2, y + h / 3, r, color);
-    g->fillCircle(x + w / 2, y + (2 * h) / 3, r, color);
+    g->fillRect(x + w / 2 - r / 2, y + h / 3 - r / 2, r, r, color);
+    g->fillRect(x + w / 2 - r / 2, y + (2 * h) / 3 - r / 2, r, r, color);
     return;
   }
 
@@ -37,28 +37,30 @@ static void draw7SegmentDigit(int x, int y, int w, int h, char ch, uint16_t colo
 
   uint8_t mask = segs[ch - '0'];
   int t = max(2, w / 6);
+  int halfH = h / 2;
 
   auto drawSeg = [&](bool lit, int sx, int sy, int sw, int sh) {
+    if (sw <= 0 || sh <= 0) return;
     uint16_t c = lit ? color : dimColor;
     if (c != 0x0000) {
-      g->fillRoundRect(sx, sy, sw, sh, min(sw, sh) / 2, c);
+      g->fillRect(sx, sy, sw, sh, c);
     }
   };
 
   // A (top)
   drawSeg(mask & 0x01, x + t, y, w - 2 * t, t);
   // B (top-right)
-  drawSeg(mask & 0x02, x + w - t, y + t, t, (h / 2) - t);
+  drawSeg(mask & 0x02, x + w - t, y + t, t, halfH - t);
   // C (bottom-right)
-  drawSeg(mask & 0x04, x + w - t, y + (h / 2) + (t / 2), t, (h / 2) - t);
+  drawSeg(mask & 0x04, x + w - t, y + halfH + (t / 2), t, halfH - t);
   // D (bottom)
   drawSeg(mask & 0x08, x + t, y + h - t, w - 2 * t, t);
   // E (bottom-left)
-  drawSeg(mask & 0x10, x, y + (h / 2) + (t / 2), t, (h / 2) - t);
+  drawSeg(mask & 0x10, x, y + halfH + (t / 2), t, halfH - t);
   // F (top-left)
-  drawSeg(mask & 0x20, x, y + t, t, (h / 2) - t);
+  drawSeg(mask & 0x20, x, y + t, t, halfH - t);
   // G (middle)
-  drawSeg(mask & 0x40, x + t, y + (h / 2) - (t / 2), w - 2 * t, t);
+  drawSeg(mask & 0x40, x + t, y + halfH - (t / 2), w - 2 * t, t);
 }
 
 static void draw7SegmentString(const char* txt, int y, uint8_t sz, uint16_t color, uint16_t dimColor) {
@@ -256,8 +258,8 @@ void ClockMode::render(const Settings& s) {
   // Helper: draw text according to fontStyle & boldText
   bool isBold = s.clock.boldText || (fontSt == 1) || (fontSt == 3);
   auto drawT = [&](const char* txt, int y, uint8_t sz, uint16_t color) {
-    if (fontSt == 2) {
-      // Digital LCD 7-Segment vector rendering
+    if (fontSt == 2 && txt && (txt[0] >= '0' && txt[0] <= '9')) {
+      // Digital LCD 7-Segment vector rendering ONLY for numeric time digits
       draw7SegmentString(txt, y, sz, color, 0x1084);
     } else if (isBold) {
       gfxDrawCenteredBold(txt, y, sz, color);
