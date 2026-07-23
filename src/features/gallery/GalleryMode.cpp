@@ -48,15 +48,13 @@ void GalleryMode::begin(const Settings& s) {
   TJpgDec.setSwapBytes(true);
   TJpgDec.setCallback(jpgDrawCallback);
   scanPhotos();
-  m_currentIdx = m_photoCount ? 0 : -1;
+  m_currentIdx = -1;
   m_nextRotateMs = millis() + (uint32_t)s.gallery.rotateSec * 1000UL;
 }
 
 void GalleryMode::invalidate(const Settings& s) {
   scanPhotos();
-  if (m_photoCount > 0) {
-    if (m_currentIdx < 0 || m_currentIdx >= m_photoCount) m_currentIdx = 0;
-  } else {
+  if (m_photoCount == 0) {
     m_currentIdx = -1;
   }
   if (s.mode == MODE_GALLERY) {
@@ -66,8 +64,8 @@ void GalleryMode::invalidate(const Settings& s) {
 
 void GalleryMode::wake(const Settings& s) {
   scanPhotos();
-  if (m_photoCount > 0 && (m_currentIdx < 0 || m_currentIdx >= m_photoCount)) {
-    m_currentIdx = 0;
+  if (m_photoCount > 0) {
+    nextPhoto(s);
   }
   m_nextRotateMs = millis() + (uint32_t)s.gallery.rotateSec * 1000UL;
   renderCurrent(s);
@@ -80,7 +78,7 @@ void GalleryMode::nextPhoto(const Settings& s) {
   }
 
   if (s.gallery.randomOrder && m_photoCount > 1) {
-    m_currentIdx = (m_currentIdx + 1 + (rand() % (m_photoCount - 1))) % m_photoCount;
+    m_currentIdx = (rand() % m_photoCount);
   } else {
     m_currentIdx = (m_currentIdx + 1) % m_photoCount;
   }

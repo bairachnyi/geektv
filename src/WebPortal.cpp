@@ -394,7 +394,10 @@ static void handlePhotoDelete() {
 
 static File s_uploadFile;
 static void handlePhotoUploadDone() {
-  if (!requireAuth()) return;
+  if (!checkAuth()) {
+    server.send(401, "application/json", "{\"ok\":false,\"error\":\"auth required\"}");
+    return;
+  }
   if (s_uploadFile) s_uploadFile.close();
   server.sendHeader("Connection", "close");
   server.send(200, "application/json", "{\"ok\":true}");
@@ -402,7 +405,7 @@ static void handlePhotoUploadDone() {
 }
 
 static void handlePhotoUpload() {
-  if (!g_authed) { server.send(401, "text/plain", "auth required"); return; }
+  if (!checkAuth()) return;
   HTTPUpload& up = server.upload();
   if (up.status == UPLOAD_FILE_START) {
     if (!LittleFS.exists("/photos")) LittleFS.mkdir("/photos");

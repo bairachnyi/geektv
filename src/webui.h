@@ -846,7 +846,9 @@ function uploadPhoto(){
  var f=$('photoFile').files[0];
  if(!f){toast('Select an image file first');return;}
  var fd=new FormData();fd.append('photo',f,f.name);
- var x=new XMLHttpRequest();x.open('POST','/api/photos/upload');
+ var p=(window.C&&window.C.adminPass)||'';
+ var u='/api/photos/upload'+(p?'?pass='+encodeURIComponent(p):'');
+ var x=new XMLHttpRequest();x.open('POST',u);
  $('photoUpBtn').disabled=true;
  x.upload.onprogress=function(e){if(e.lengthComputable){var p=Math.round(e.loaded/e.total*100);$('photoBar').style.width=p+'%';$('photoMsg').textContent='Uploading '+p+'%'}};
  x.onload=function(){$('photoUpBtn').disabled=false;if(x.status==200){$('photoMsg').textContent='Photo uploaded successfully!';$('photoBar').style.width='100%';loadPhotos();}else{$('photoMsg').textContent='Upload failed: '+x.responseText}};
