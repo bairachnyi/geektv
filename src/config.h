@@ -15,9 +15,9 @@
 #define FW_VERSION  "0.6.0"
 
 // Project / update references (shown in the web UI; used by the GitHub self-update)
-#define REPO_URL      "https://github.com/bairachnyi/smalltv-ultra"
+#define REPO_URL      "https://github.com/bairachnyi/geektv"
 #define REPO_OWNER    "bairachnyi"
-#define REPO_NAME     "smalltv-ultra"
+#define REPO_NAME     "geektv"
 // Release asset the GitHub self-updater pulls — one app image per target.
 #if defined(SMALLTV_ESP32C2)
   #define UPDATE_ASSET "smalltv-ultra-firmware-c2.bin"
