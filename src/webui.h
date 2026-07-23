@@ -1232,8 +1232,10 @@ function applyCropAndUpload(){
 
   closeCropModal();
 
+  var p=(window.C&&window.C.adminPass)||'';
+  var u='/api/photos/upload'+(p?'?pass='+encodeURIComponent(p):'');
   var x=new XMLHttpRequest();
-  x.open('POST','/api/photos/upload');
+  x.open('POST',u);
   $('photoUpBtn').disabled=true;
   $('photoMsg').textContent='Uploading cropped 240x240 image ('+Math.round(blob.size/1024)+' KB)...';
 

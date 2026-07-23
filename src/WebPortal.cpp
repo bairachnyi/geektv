@@ -398,7 +398,9 @@ static void handlePhotoUploadDone() {
     server.send(401, "application/json", "{\"ok\":false,\"error\":\"auth required\"}");
     return;
   }
-  if (s_uploadFile) s_uploadFile.close();
+  if (s_uploadFile) {
+    s_uploadFile.close();
+  }
   server.sendHeader("Connection", "close");
   server.send(200, "application/json", "{\"ok\":true}");
   appInvalidate();
@@ -412,6 +414,16 @@ static void handlePhotoUpload() {
     String filename = up.filename;
     int lastSlash = filename.lastIndexOf('/');
     if (lastSlash >= 0) filename = filename.substring(lastSlash + 1);
+    
+    // Sanitize filename: convert to lowercase standard characters
+    filename.toLowerCase();
+    filename.replace(" ", "_");
+    filename.replace("%20", "_");
+    
+    if (!filename.endsWith(".jpg") && !filename.endsWith(".jpeg") && !filename.endsWith(".png") && !filename.endsWith(".gif")) {
+      filename += ".jpg";
+    }
+
     String targetPath = "/photos/" + filename;
     if (LittleFS.exists(targetPath)) LittleFS.remove(targetPath);
     s_uploadFile = LittleFS.open(targetPath, "w");
