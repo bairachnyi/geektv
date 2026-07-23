@@ -58,8 +58,13 @@ bool clockTrusted() {
 }
 
 bool clockNow(struct tm& out) {
-  if (!platformTimeValid()) return false;
-  time_t now = time(nullptr);
+  time_t now;
+  if (platformTimeValid()) {
+    now = time(nullptr);
+  } else {
+    // Software fallback time based on millis() so the clock always ticks even before/without NTP
+    now = (time_t)(1700000000UL + (millis() / 1000UL));
+  }
   localtime_r(&now, &out);
   return true;
 }

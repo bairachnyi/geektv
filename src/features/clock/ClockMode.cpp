@@ -125,22 +125,12 @@ void ClockMode::service(const Settings& s) {
     render(s);
   }
 
-  // Clock render tick (every second if showSeconds or minute change)
+  // Clock render tick: re-render every second so time always ticks smoothly
   struct tm t;
   if (clockNow(t)) {
-    if (s.clock.showSeconds) {
-      if (t.tm_sec != m_lastSec) {
-        m_lastSec = t.tm_sec;
-        render(s);
-      }
-    } else {
-      if (t.tm_min != m_lastMin) {
-        m_lastMin = t.tm_min;
-        render(s);
-      }
-    }
-  } else {
-    if (nowMs - m_lastRenderMs > 5000) {
+    if (t.tm_sec != m_lastSec) {
+      m_lastSec = t.tm_sec;
+      m_lastMin = t.tm_min;
       render(s);
     }
   }
@@ -192,6 +182,7 @@ void ClockMode::render(const Settings& s) {
 
   // Resolve font scale: timeScale (1..7) and dateScale (1..4)
   uint8_t timeSz = s.clock.timeScale > 0 ? s.clock.timeScale : (s.clock.showSeconds ? 4 : 5);
+  if (s.clock.showSeconds && timeSz > 5) timeSz = 5; // 8 chars "12:34:56" fit max at scale 5 (240px)
   uint8_t dateSz = s.clock.dateScale > 0 ? s.clock.dateScale : 2;
 
   uint16_t tc = s.clock.timeColor;
