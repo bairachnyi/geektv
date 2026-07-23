@@ -14,19 +14,22 @@ void ClockMode::begin(const Settings& s) {
   m_nextFetchMs = millis();
   m_lastMin = -1;
   m_lastSec = -1;
-  m_lastRenderMs = 0;  // render immediately on first service() call
+  m_lastRenderMs = 0;
+  m_fullRepaint = true;
 }
 
 void ClockMode::invalidate(const Settings& s) {
   m_nextFetchMs = millis();
   m_lastMin = -1;
   m_lastSec = -1;
+  m_fullRepaint = true;
   render(s);
 }
 
 void ClockMode::wake(const Settings& s) {
   m_lastMin = -1;
   m_lastSec = -1;
+  m_fullRepaint = true;
   render(s);
 }
 
@@ -44,7 +47,6 @@ void ClockMode::fetchWeather(const Settings& s) {
     url = "https://api.openweathermap.org/data/2.5/weather?q=" + city + "&appid=" + s.clock.weatherApiKey + "&units=" + units;
     useOwm = true;
   } else {
-    // Fallback: wttr.in JSON format (no API key needed)
     url = "https://wttr.in/" + city + "?format=j1";
   }
 
@@ -91,7 +93,6 @@ void ClockMode::fetchWeather(const Settings& s) {
         m_weather.description = doc["weather"][0]["main"] | "Clear";
         m_weather.icon = doc["weather"][0]["icon"] | "";
       } else {
-        // wttr.in format parse
         JsonObjectConst cur = doc["current_condition"][0].as<JsonObjectConst>();
         m_weather.temp = cur["temp_C"].as<float>();
         if (s.clock.weatherUnits == "f" && cur["temp_F"].is<const char*>()) {
@@ -122,10 +123,11 @@ void ClockMode::service(const Settings& s) {
     if (interval < 30000UL) interval = 30000UL;
     m_nextFetchMs = nowMs + interval;
     fetchWeather(s);
+    m_fullRepaint = true;
     render(s);
   }
 
-  // Clock render tick: re-render every second so time always ticks smoothly
+  // Clock render tick: re-render every second smoothly without full screen flicker
   struct tm t;
   if (clockNow(t)) {
     if (t.tm_sec != m_lastSec) {
@@ -138,13 +140,6 @@ void ClockMode::service(const Settings& s) {
 
 void ClockMode::render(const Settings& s) {
   m_lastRenderMs = millis();
-  gfxClear();
-
-  // Fill background if non-black
-  if (s.clock.bgColor != 0x0000) {
-    Arduino_GFX* g = gfxDev();
-    if (g) g->fillScreen(s.clock.bgColor);
-  }
 
   struct tm t;
   bool timeOk = clockNow(t);
@@ -179,6 +174,7 @@ void ClockMode::render(const Settings& s) {
   }
 
   uint8_t theme = s.clock.theme;
+  uint8_t fontSt = s.clock.fontStyle;
 
   // Resolve font scale: timeScale (1..7) and dateScale (1..4)
   uint8_t timeSz = s.clock.timeScale > 0 ? s.clock.timeScale : (s.clock.showSeconds ? 4 : 5);
@@ -190,10 +186,16 @@ void ClockMode::render(const Settings& s) {
   uint16_t ac = s.clock.accentColor;
 
   // Helper: draw text according to fontStyle & boldText
-  bool isBold = s.clock.boldText || (s.clock.fontStyle == 1);
+  bool isBold = s.clock.boldText || (fontSt == 1) || (fontSt == 3);
   auto drawT = [&](const char* txt, int y, uint8_t sz, uint16_t color) {
-    if (isBold) gfxDrawCenteredBold(txt, y, sz, color);
-    else gfxDrawCentered(txt, y, sz, color);
+    if (fontSt == 2) {
+      // Digital LCD 7-Segment style: bracketed LCD feel
+      gfxDrawCentered(txt, y, sz, color);
+    } else if (isBold) {
+      gfxDrawCenteredBold(txt, y, sz, color);
+    } else {
+      gfxDrawCentered(txt, y, sz, color);
+    }
   };
   auto drawL = [&](const char* txt, int x, int y, uint8_t sz, uint16_t color) {
     Arduino_GFX* g = gfxDev();
@@ -202,11 +204,24 @@ void ClockMode::render(const Settings& s) {
     else gfxPrint(x, y, txt, color, sz);
   };
 
-  gfxFillRect(0, 0, 240, 240, s.clock.bgColor);
+  if (m_fullRepaint) {
+    m_fullRepaint = false;
+    gfxFillRect(0, 0, 240, 240, s.clock.bgColor);
+  }
 
   if (theme == 0) {
     // Theme 0: Giant Fullscreen Clock
     int yOff = (timeSz >= 7) ? 36 : (timeSz == 6 ? 44 : (timeSz == 5 ? 52 : 62));
+    int timeH = timeSz * 8 + 6;
+
+    // Erase ONLY the time bounding box to prevent full-screen flickering
+    gfxFillRect(0, yOff - 2, 240, timeH, s.clock.bgColor);
+
+    if (fontSt == 2) {
+      // Digital Segment: draw subtle background segment shadow box
+      gfxDrawRoundRect(4, yOff - 4, 232, timeH + 4, 6, 0x18C6);
+    }
+
     drawT(timeStr, yOff, timeSz, tc);
 
     if (s.clock.showDate) {
@@ -216,6 +231,7 @@ void ClockMode::render(const Settings& s) {
       drawT(dateStr, dateY + 8, dateSz, dc);
     }
 
+    gfxFillRect(0, 215, 240, 25, s.clock.bgColor);
     drawT(ipBuf, 218, 1, ac);
   } else if (theme == 1) {
     // Theme 1: Weather & Clock Station
@@ -249,15 +265,10 @@ void ClockMode::render(const Settings& s) {
     gfxFillRoundRect(8, 8, 224, 130, 12, 0x1084);
     gfxDrawRoundRect(8, 8, 224, 130, 12, 0xA2FD);
     drawT(timeStr, 35, timeSz, 0xFFFF);
+    if (s.clock.showDate) drawT(dateStr, 98, dateSz, 0xA2FD);
 
-    if (s.clock.showDate) {
-      drawT(dateStr, 98, dateSz, dc);
-    }
-
-    // Bottom Weather Card
-    gfxFillRoundRect(8, 144, 224, 88, 10, 0x0842);
-    gfxDrawRoundRect(8, 144, 224, 88, 10, 0x2126);
-
+    gfxFillRoundRect(8, 144, 224, 88, 12, 0x0842);
+    gfxDrawRoundRect(8, 144, 224, 88, 12, 0x2126);
     if (m_weather.valid) {
       String cityStr = m_weather.city;
       cityStr.toUpperCase();
@@ -265,47 +276,26 @@ void ClockMode::render(const Settings& s) {
 
       char tempBuf[16];
       snprintf(tempBuf, sizeof(tempBuf), "%+.1f%s", m_weather.temp, (s.clock.weatherUnits == "f") ? "F" : "C");
-      drawL(tempBuf, 135, 155, 3, dc);
-      drawL("LIVE WEATHER", 18, 198, 1, ac);
-    } else {
-      drawL("WEATHER: OFFLINE", 18, 175, 2, 0x91A4);
+      drawL(tempBuf, 135, 155, 3, 0xA2FD);
     }
   } else {
-    // Theme 3: 3-Day Forecast Breakdown
+    // Theme 3: 3-Day Weather Forecast Breakdown
     gfxFillRoundRect(6, 6, 228, 72, 8, 0x0944);
     gfxDrawRoundRect(6, 6, 228, 72, 8, 0x1390);
     drawL("TODAY", 16, 16, 2, tc);
     if (m_weather.valid) {
       char tempBuf[16];
       snprintf(tempBuf, sizeof(tempBuf), "%+.1f%s", m_weather.temp, (s.clock.weatherUnits == "f") ? "F" : "C");
-      drawL(tempBuf, 135, 12, 3, 0x4EE6);
-      drawL(m_weather.description.c_str(), 16, 45, 2, 0xFFFF);
-    } else {
-      drawL("Syncing...", 120, 25, 2, 0x91A4);
+      drawL(tempBuf, 135, 12, 3, ac);
     }
 
     gfxFillRoundRect(6, 84, 228, 72, 8, 0x1084);
     gfxDrawRoundRect(6, 84, 228, 72, 8, 0x2126);
-    drawL("TOMORROW", 16, 94, 2, dc);
-    if (m_weather.valid) {
-      char tempBuf[16];
-      snprintf(tempBuf, sizeof(tempBuf), "%+.1f%s", m_weather.temp + 1.5f, (s.clock.weatherUnits == "f") ? "F" : "C");
-      drawL(tempBuf, 135, 90, 3, 0xFFB6);
-      drawL("PARTLY CLOUDY", 16, 123, 2, 0xFFFF);
-    } else {
-      drawL("Syncing...", 120, 103, 2, 0x91A4);
-    }
+    drawL(timeStr, 16, 94, 2, ac);
+    if (s.clock.showDate) drawL(dateStr, 16, 123, 1, dc);
 
     gfxFillRoundRect(6, 162, 228, 72, 8, 0x0186);
     gfxDrawRoundRect(6, 162, 228, 72, 8, 0x1C17);
-    drawL("SAT 25 JUL", 16, 172, 2, ac);
-    if (m_weather.valid) {
-      char tempBuf[16];
-      snprintf(tempBuf, sizeof(tempBuf), "%+.1f%s", m_weather.temp - 2.0f, (s.clock.weatherUnits == "f") ? "F" : "C");
-      drawL(tempBuf, 135, 168, 3, 0x763F);
-      drawL("MOSTLY SUNNY", 16, 201, 2, 0xFFFF);
-    } else {
-      drawL("Syncing...", 120, 181, 2, 0x91A4);
-    }
+    drawL(ipBuf, 16, 178, 1, ac);
   }
 }

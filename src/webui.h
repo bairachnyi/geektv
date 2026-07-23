@@ -653,72 +653,88 @@ function updateClockPreview(){
  var cv=$('clockPreview'); if(!cv||!cv.getContext) return;
  var ctx=cv.getContext('2d');
  var theme=parseInt(gv('clockTheme'))||0;
- var tc=hexToRgb565(gv('timeColor')||'#39E7');
- var dc=hexToRgb565(gv('dateColor')||'#FFB6');
- var ac=hexToRgb565(gv('accentColor')||'#58A9');
- var bg=hexToRgb565(gv('bgColor')||'#0000');
- var fs=parseInt(gv('fontScale'))||0;
- var isBold=gc('boldText');
+ var tc=gv('timeColor')||'#39e7ff';
+ var dc=gv('dateColor')||'#ffb6c1';
+ var ac=gv('accentColor')||'#58a9ff';
+ var bg=gv('bgColor')||'#000000';
+ var timeSz=parseInt(gv('timeScale'))||5;
+ var dateSz=parseInt(gv('dateScale'))||2;
+ var fontSt=gv('fontStyle')||'0';
+ var isBold=gc('boldText')||(fontSt==='1');
  var showSec=gc('showSeconds');
  var showDt=gc('showDate');
- // Default font sizes per theme (overridden by fontScale)
- var defTimeSz={0:showSec?4:5, 1:4, 2:5, 3:3}[theme]||5;
- var timeSz=fs>0?fs:defTimeSz;
- var dateSz=Math.max(1,timeSz>2?2:1);
 
- function c565toCSS(v){var r=((v>>11)&0x1F)<<3, g=((v>>5)&0x3F)<<2, b=(v&0x1F)<<3; return 'rgb('+r+','+g+','+b+')';}
- function fillBg(){ctx.fillStyle=c565toCSS(bg);ctx.fillRect(0,0,240,240);}
- function drawText(txt,x,y,sz,color){ctx.fillStyle=c565toCSS(color);ctx.font='bold '+(sz*8)+'px monospace';ctx.textAlign='left';ctx.fillText(txt,x,y+(sz*8));if(isBold){ctx.fillText(txt,x+1,y+(sz*8));ctx.fillText(txt,x,y+1+(sz*8));}}
- function drawCentered(txt,y,sz,color){ctx.fillStyle=c565toCSS(color);ctx.font='bold '+(sz*8)+'px monospace';ctx.textAlign='center';ctx.fillText(txt,120,y+(sz*8));if(isBold){ctx.fillText(txt,121,y+(sz*8));ctx.fillText(txt,120,y+1+(sz*8));}}
+ if(showSec && timeSz > 5) timeSz = 5;
 
- fillBg();
+ ctx.fillStyle=bg; ctx.fillRect(0,0,240,240);
+
+ var fontFamily = (fontSt==='2' ? '"Courier New", monospace' : (fontSt==='3' ? 'system-ui, sans-serif' : 'monospace'));
+ var fontWeight = isBold ? 'bold ' : 'normal ';
+
+ function drawText(txt,x,y,sz,color){
+  ctx.fillStyle=color;
+  ctx.font=fontWeight+(sz*8)+'px '+fontFamily;
+  ctx.textAlign='left';
+  ctx.fillText(txt,x,y+(sz*8));
+  if(isBold){ctx.fillText(txt,x+1,y+(sz*8));}
+ }
+ function drawCentered(txt,y,sz,color){
+  ctx.fillStyle=color;
+  ctx.font=fontWeight+(sz*8)+'px '+fontFamily;
+  ctx.textAlign='center';
+  ctx.fillText(txt,120,y+(sz*8));
+  if(isBold){ctx.fillText(txt,121,y+(sz*8));}
+ }
+
  var timeStr=showSec?'12:34:56':'12:34';
  var dateStr='MON, 23 JUL 2026';
 
  if(theme===0){
-  // Giant Fullscreen
-  drawCentered(timeStr,55,timeSz,tc);
-  if(showDt) drawCentered(dateStr,145,dateSz,dc);
-  drawCentered('IP: 192.168.1.141',215,1,ac);
+  var yOff=(timeSz>=7)?36:(timeSz===6?44:(timeSz===5?52:62));
+  drawCentered(timeStr,yOff,timeSz,tc);
+  if(showDt) {
+   var dateY=(timeSz>=6)?168:142;
+   ctx.fillStyle='rgba(24,198,198,0.15)';ctx.fillRect(10,dateY,220,32);
+   ctx.strokeStyle=dc;ctx.lineWidth=1;ctx.strokeRect(10,dateY,220,32);
+   drawCentered(dateStr,dateY+4,dateSz,dc);
+  }
+  drawCentered('IP: 192.168.1.141',218,1,ac);
  } else if(theme===1){
-  // Weather Station
-  ctx.fillStyle=c565toCSS(0x0186);ctx.fillRect(8,8,224,120);
-  ctx.strokeStyle=c565toCSS(0x1C17);ctx.strokeRect(8,8,224,120);
-  drawText('MOSCOW',18,18,2,0x763F);
-  drawText('+22.5C',18,46,4,0xFCE8);
-  drawText('CLEAR SKY',18,94,2,0xFFFFFF);
-  ctx.fillStyle=c565toCSS(0x08C9);ctx.fillRect(8,134,224,98);
-  ctx.strokeStyle=c565toCSS(0x22F3);ctx.strokeRect(8,134,224,98);
-  drawCentered(timeStr,148,timeSz,0xFFFFFF);
-  if(showDt) drawCentered(dateStr,198,dateSz,0x763F);
+  ctx.fillStyle='rgba(1,134,200,0.2)';ctx.fillRect(8,8,224,120);
+  ctx.strokeStyle='#1C17';ctx.strokeRect(8,8,224,120);
+  drawText('MOSCOW',18,18,2,ac);
+  drawText('+22.5C',18,46,4,tc);
+  drawText('CLEAR SKY',18,94,2,dc);
+  ctx.fillStyle='rgba(8,201,150,0.2)';ctx.fillRect(8,134,224,98);
+  ctx.strokeStyle='#22F3';ctx.strokeRect(8,134,224,98);
+  drawCentered(timeStr,148,timeSz,tc);
+  if(showDt) drawCentered(dateStr,198,dateSz,dc);
  } else if(theme===2){
-  // Modern OLED
-  ctx.fillStyle=c565toCSS(0x1084);ctx.fillRect(8,8,224,130);
-  ctx.strokeStyle=c565toCSS(0xA2FD);ctx.strokeRect(8,8,224,130);
-  drawCentered(timeStr,35,timeSz,0xFFFFFF);
-  if(showDt) drawCentered(dateStr,98,dateSz,0xA2FD);
-  ctx.fillStyle=c565toCSS(0x0842);ctx.fillRect(8,144,224,88);
-  ctx.strokeStyle=c565toCSS(0x2126);ctx.strokeRect(8,144,224,88);
-  drawText('MOSCOW',18,160,2,0xFFFFFF);
-  drawText('+22.5C',135,155,3,0xA2FD);
-  drawText('LIVE WEATHER',18,198,1,0x58A9);
+  ctx.fillStyle='rgba(16,132,200,0.2)';ctx.fillRect(8,8,224,130);
+  ctx.strokeStyle=ac;ctx.strokeRect(8,8,224,130);
+  drawCentered(timeStr,35,timeSz,tc);
+  if(showDt) drawCentered(dateStr,98,dateSz,dc);
+  ctx.fillStyle='rgba(8,66,100,0.2)';ctx.fillRect(8,144,224,88);
+  ctx.strokeStyle='#2126';ctx.strokeRect(8,144,224,88);
+  drawText('MOSCOW',18,160,2,dc);
+  drawText('+22.5C',135,155,3,ac);
+  drawText('LIVE WEATHER',18,198,1,ac);
  } else {
-  // 3-Day Forecast
-  ctx.fillStyle=c565toCSS(0x0944);ctx.fillRect(6,6,228,72);
-  ctx.strokeStyle=c565toCSS(0x1390);ctx.strokeRect(6,6,228,72);
-  drawText('TODAY',16,16,2,0x39E7);
-  drawText('+22.5C',135,12,3,0x4EE6);
-  drawText('CLEAR SKY',16,45,2,0xFFFFFF);
-  ctx.fillStyle=c565toCSS(0x1084);ctx.fillRect(6,84,228,72);
-  ctx.strokeStyle=c565toCSS(0x2126);ctx.strokeRect(6,84,228,72);
-  drawText('TOMORROW',16,94,2,0xA2FD);
-  drawText('+24.0C',135,90,3,0xFFB6);
-  drawText('PARTLY CLOUDY',16,123,2,0xFFFFFF);
-  ctx.fillStyle=c565toCSS(0x0186);ctx.fillRect(6,162,228,72);
-  ctx.strokeStyle=c565toCSS(0x1C17);ctx.strokeRect(6,162,228,72);
-  drawText('SAT 25 JUL',16,172,2,0x763F);
-  drawText('+20.5C',135,168,3,0x763F);
-  drawText('MOSTLY SUNNY',16,201,2,0xFFFFFF);
+  ctx.fillStyle='rgba(9,68,120,0.2)';ctx.fillRect(6,6,228,72);
+  ctx.strokeStyle='#1390';ctx.strokeRect(6,6,228,72);
+  drawText('TODAY',16,16,2,tc);
+  drawText('+22.5C',135,12,3,ac);
+  drawText('CLEAR SKY',16,45,2,dc);
+  ctx.fillStyle='rgba(16,132,200,0.2)';ctx.fillRect(6,84,228,72);
+  ctx.strokeStyle='#2126';ctx.strokeRect(6,84,228,72);
+  drawText('TOMORROW',16,94,2,ac);
+  drawText('+24.0C',135,90,3,dc);
+  drawText('PARTLY CLOUDY',16,123,2,dc);
+  ctx.fillStyle='rgba(1,134,200,0.2)';ctx.fillRect(6,162,228,72);
+  ctx.strokeStyle='#1C17';ctx.strokeRect(6,162,228,72);
+  drawText('SAT 25 JUL',16,172,2,ac);
+  drawText('+20.5C',135,168,3,ac);
+  drawText('MOSTLY SUNNY',16,201,2,dc);
  }
 }
 function resetClockColors(){

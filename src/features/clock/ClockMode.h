@@ -34,6 +34,7 @@ private:
   uint32_t    m_lastRenderMs = 0;
   int8_t      m_lastMin = -1;
   int8_t      m_lastSec = -1;
+  bool        m_fullRepaint = true;
 };
 
 extern ClockMode g_clockMode;
