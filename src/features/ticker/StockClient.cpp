@@ -468,7 +468,7 @@ static bool fetchUrl(const Settings& s, const String& url, ParseKind kind, Stock
       // MFLN, so it needs a bigger receive buffer than Yahoo's small records.
       uint16_t rx = (kind == PARSE_GITHUB) ? GH_QUOTES_RXBUF : 2048;
       if (ESP.getFreeHeap() < (uint32_t)rx + 12000) return false;
-      client.reset(platformMakeSecureClient(rx, nullptr, 512, /*cheapCiphers=*/true));
+      client.reset(platformMakeSecureClient(rx, nullptr, 512, /*cheapCiphers=*/false));
     }
   } else {
     client.reset(new WiFiClient());

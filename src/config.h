@@ -122,7 +122,7 @@
 #define YAHOO_CHART_HOST1 "query1.finance.yahoo.com"
 #define YAHOO_CHART_HOST2 "query2.finance.yahoo.com"
 #define YAHOO_CHART_PATH  "/v8/finance/chart/"
-#define YAHOO_USER_AGENT  "Mozilla/5.0 (SmallTV)"
+#define YAHOO_USER_AGENT  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
 
 // cash.ch public GraphQL endpoint. The device sends two small hand-written
 // GraphQL queries per symbol as plain GETs (?query=...): a ~200 B quote and a
