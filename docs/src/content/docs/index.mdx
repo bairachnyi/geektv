@@ -1,0 +1,62 @@
+---
+title: SmallTV Ultra
+description: Custom firmware with GitHub GH//STAT, stock ticker, AI usage meter, web settings and OTA.
+template: splash
+hero:
+  tagline: Three focused modes for GitHub CI/CD, markets and AI usage.
+  image:
+    file: ../../assets/logo.svg
+  actions:
+    - text: Get started
+      link: /smalltv-ultra/getting-started/hardware/
+      icon: right-arrow
+    - text: View on GitHub
+      link: https://github.com/bairachnyi/smalltv-ultra
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+The GeekMagic SmallTV is a small cube with a 1.54" colour screen, an ESP inside, and a USB-C port. This development firmware currently has three modes you switch between in a built-in web UI, and it updates over WiFi. The web UI header shows a chip badge for the board it's running on, and an optional scheduled night mode dims or turns off the backlight on an NTP clock and timezone you pick, without taking the device offline.
+
+:::caution[Factory features are not ported yet]
+Clock themes, weather/forecast and the photo gallery from factory V9.0.51 are not
+in this candidate. Keep testing in the emulator; do not flash it as a complete
+factory replacement yet.
+:::
+
+![The SmallTV running its modes](/smalltv-ultra/assets/screen.svg)
+
+## The three modes
+
+<CardGrid>
+  <Card title="Stock and crypto ticker" icon="seti:default">
+    Price, change, percent change, and a sparkline for up to 8 rotating symbols. Data from Yahoo Finance with no backend, or your own webhook.
+  </Card>
+  <Card title="AI usage meter" icon="seti:crystal">
+    Antigravity and Codex percentages with reset countdowns, fed by a trusted local bridge. Personal-plan values require a local adapter because the providers do not expose public personal-quota APIs.
+  </Card>
+  <Card title="GitHub GH//STAT" icon="seti:github">
+    Animated Actions, deployments, pull-request checks and releases with live timers, timestamps, pagination and structured errors for private repositories.
+  </Card>
+</CardGrid>
+
+## Three hardware variants
+
+This firmware builds for three boards from one codebase. Confirm which one you have before you flash it.
+
+<CardGrid>
+  <LinkCard title="SmallTV (ESP8266)" href="/smalltv-ultra/getting-started/hardware/" description="ESP-12F. Flashes over the air from the stock web UI." />
+  <LinkCard title="SmallTV (ESP32-C2 / ESP8684)" href="/smalltv-ultra/getting-started/hardware/" description="CH340C next to the USB-C port. Flashes over USB-C with esptool." />
+  <LinkCard title="NM-TV-154 (classic ESP32)" href="/smalltv-ultra/getting-started/hardware/" description="NMMiner BTC lottery miner, same cube and screen. Flashes over USB with esptool." />
+</CardGrid>
+
+## Start here
+
+<CardGrid>
+  <LinkCard title="Hardware and variants" href="/smalltv-ultra/getting-started/hardware/" />
+  <LinkCard title="Flashing" href="/smalltv-ultra/getting-started/flashing/" />
+  <LinkCard title="First-time setup" href="/smalltv-ultra/getting-started/setup/" />
+  <LinkCard title="Building from source" href="/smalltv-ultra/reference/building/" />
+</CardGrid>

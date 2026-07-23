@@ -1,36 +1,119 @@
-## We apologize for and appalled by the shoddy packaging, crippled functionality and shabby UI interface of the counterfeit products. And here attach links to our authorized stores for your reference. All items marked with the GeekMagic® trademark are authentic Ultra models; products labeled unbranded or with other brand names are likely counterfeits.
+# GeekTV Dashboard
 
-### Official Links
-📺 Website Videos & Store: https://geekmagic.cc
+Custom open firmware **GeekTV** for the **GeekMagic SmallTV Ultra**. This
+fork is based on [giovi321/smalltv-mod](https://github.com/giovi321/smalltv-mod)
+and is tailored for the `bairachnyi` device and GitHub projects.
 
-## GeekMagic Outlet Store:
-Ultra model with ESP8266:
-https://www.aliexpress.com//item/1005011742070248.html
-https://www.aliexpress.com//item/1005006727771881.html
+The first custom feature is a 240×240 GitHub status dashboard. Version 0.5.0 shows:
 
-PRO model with ESP32:
-https://www.aliexpress.com/item/1005010250156249.html
-https://www.aliexpress.com/item/1005005699410709.html
+- queued and currently running workflows;
+- successful runs and failures;
+- repository, workflow and branch;
+- up to sixteen active/recent events, two large cards per rotating page;
+- projects owned by `bairachnyi` and `ananas-it` by default.
+- Actions, deployments/environments, pull-request checks and releases;
+- universal `owner/repository` allowlists and per-owner read-only credentials.
 
-## GeekMagic Official Store:
-Ultra model with ESP8266:
-https://www.aliexpress.com/item/1005006059166210.html
+Ticker, AI Usage and GitHub are normal display modes and can participate in the
+configurable carousel. Plane Radar has been removed.
 
-PRO model with ESP32:
-https://www.aliexpress.com/item/1005006379505056.html
+Important: clocks, weather and the photo gallery from factory firmware V9.0.51
+have not been ported yet. Do not flash this development candidate as a complete
+replacement for the factory firmware.
 
-# English: Please download and extract the zip package, then upload the extracted files in the Firmware Upgrade section of the Web Console. Important: Before upgrading, make sure the model is GeekMagic-Ultra. Using other models may result in display failure or malfunction!
+## Documentation
 
-한국어: zip 압축 파일을 다운로드한 후 압축을 해제하고, Web 콘솔의 펌웨어 업그레이드 옵션에서 업로드하세요. 업그레이드 전에 반드시 모델이 GeekMagic-Ultra 인지 확인해야 합니다. 다른 모델을 사용하면 화면이 표시되지 않거나 정상적으로 작동하지 않을 수 있습니다!
+- [GitHub GH//STAT screen, tokens, fields and errors](docs/src/content/docs/features/github.md)
+- [Every web-interface setting](docs/src/content/docs/reference/settings.md)
+- [Firmware architecture and module map](docs/src/content/docs/reference/architecture.md)
+- [Device and bridge HTTP API](docs/src/content/docs/reference/http-api.md)
 
-# Model: Smalltv-Ultra
-Please check your MODEL before the update, or you may update the wrong one, and will not work properly!!!!!
+## How the GitHub feed works
 
-We have different model but with the same CPU, so please take care before the update, please check your model and upload the Corresponding firmware,
-or it will not work properly, and may make it diffcult to update back.
+The ESP8266 reads a small JSON endpoint from a bridge running on a Mac or
+server. The GitHub credential stays on that bridge, avoiding storage of a
+powerful token on the device and keeping GitHub API/TLS work away from its
+limited RAM.
 
-If the udpate return "Magic Byte" error, or not enough space, please check the md5sum of the downloaded file.
+```text
+GitHub Actions -> Mac/server bridge -> /api/github -> SmallTV Ultra
+```
 
-Some antivirus software will modify the firmware.bin file, you can close it and try again.
+The bridge currently supports polling GitHub. Its response format is documented
+in [docs/src/content/docs/features/github.md](docs/src/content/docs/features/github.md).
+A later version can receive GitHub webhooks for near-instant updates.
 
-Thank you.
+## Run the Mac emulator
+
+No dependencies are required beyond Node.js 18 or newer.
+
+```bash
+node emulator/server.mjs
+```
+
+Open <http://localhost:8788>. The browser displays the exact 240×240 layout and
+lets you switch between idle, deploying, failure and mixed test scenarios.
+
+To test real public and private repositories, create a fine-grained GitHub token
+with read-only **Actions**, **Deployments**, **Pull requests**, **Checks** and
+**Contents** access, then run:
+
+```bash
+GITHUB_MODE=live GITHUB_TOKEN=github_pat_xxx node emulator/server.mjs
+```
+
+The defaults are `GITHUB_OWNERS=bairachnyi,ananas-it`. Set `GITHUB_REPOS` to a
+comma-separated list when you want an explicit allowlist. See
+[emulator/README.md](emulator/README.md) for every option.
+
+On the device, open **GitHub**, enter the LAN feed printed by the emulator, for
+example `http://192.168.1.246:8788/api/github`, and save. The Mac and SmallTV
+must be on the same Wi-Fi network and macOS must allow incoming Node connections.
+
+## Build
+
+Install PlatformIO and build the two ESP8266 images:
+
+```bash
+pio run -e smalltv
+pio run -e smalltv_loader
+```
+
+Outputs:
+
+- `.pio/build/smalltv/firmware.bin` — full firmware;
+- `.pio/build/smalltv_loader/firmware.bin` — first-install OTA loader.
+
+GitHub Actions publishes them as `smalltv-ultra-firmware.bin` and
+`smalltv-ultra-loader.bin`.
+
+## First installation on SmallTV Ultra
+
+The stock Ultra partition is too small for the full custom image, so the first
+installation is deliberately two-step:
+
+1. Back up the stock firmware if recovery matters to you. The newest retained
+   vendor package is in `stock-firmware/V9.0.50`.
+2. Open `http://<device-ip>/update` and upload `smalltv-ultra-loader.bin`.
+3. Join the open Wi-Fi network `SmallTV-Loader` and open
+   `http://192.168.4.1/update`.
+4. Upload `smalltv-ultra-firmware.bin`.
+5. Join `SmallTV-Setup`, configure the 2.4 GHz Wi-Fi network, then use the IP or
+   `.local` address shown on the screen.
+
+After that, normal updates are available in the web interface. Do not upload
+the full image directly to the original Ultra updater: it normally fails with
+`Not Enough Space`.
+
+## Repository status
+
+- Old V9.0.24–V9.0.46 vendor firmware was removed.
+- Translated/manual PDF bundles and Chinese material were removed.
+- V9.0.50 is retained only as the latest stock recovery reference.
+- Current development firmware version is `0.5.0`.
+
+## License and attribution
+
+Firmware code inherits the [WTFPL](LICENSE) license from `smalltv-mod`. GeekMagic
+and GitHub are trademarks of their respective owners; this project is not
+affiliated with either company.
