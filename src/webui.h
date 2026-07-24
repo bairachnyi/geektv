@@ -13,6 +13,7 @@ static const char WEBUI_HTML[] PROGMEM = R"HTMLPAGE(<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GeekTV</title>
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap');
 :root{--bg:#0e1116;--card:#171c24;--mut:#8b96a5;--fg:#e6edf3;--acc:#3fb950;--acc2:#2f81f7;--red:#f85149;--bd:#262d38}
 *{box-sizing:border-box}
 body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--fg);font-size:15px}
@@ -657,8 +658,8 @@ function updateClockPreview(){
 
  ctx.fillStyle=bg; ctx.fillRect(0,0,240,240);
 
- var fontFamily = (fontSt==='2' ? '"Courier New", monospace' : (fontSt==='3' ? 'system-ui, sans-serif' : 'monospace'));
- var fontWeight = isBold ? 'bold ' : 'normal ';
+ var fontFamily = 'Montserrat, system-ui, sans-serif';
+ var fontWeight = '700 ';
 
  function drawText(txt,x,y,sz,color){
   ctx.fillStyle=color;
@@ -1093,6 +1094,10 @@ function openCropModal(){
 function handlePhotoSelect(e){
  var file=e.target.files[0];
  if(!file)return;
+ if(file.name.toLowerCase().endsWith('.gif') || file.type === 'image/gif') {
+  uploadRawFile(file);
+  return;
+ }
  cropData.activeFile=file;
  var reader=new FileReader();
  reader.onload=function(evt){
@@ -1106,6 +1111,38 @@ function handlePhotoSelect(e){
   img.src=evt.target.result;
  };
  reader.readAsDataURL(file);
+}
+
+function uploadRawFile(file){
+ var fd=new FormData();
+ fd.append('photo',file,file.name);
+ var p=(window.C&&window.C.adminPass)||'';
+ var u='/api/photos/upload'+(p?'?pass='+encodeURIComponent(p):'');
+ var x=new XMLHttpRequest();
+ x.open('POST',u);
+ $('photoUpBtn').disabled=true;
+ $('photoMsg').textContent='Uploading raw GIF ('+Math.round(file.size/1024)+' KB)...';
+ x.upload.onprogress=function(e){
+  if(e.lengthComputable){
+   var p=Math.round(e.loaded/e.total*100);
+   $('photoBar').style.width=p+'%';
+  }
+ };
+ x.onload=function(){
+  $('photoUpBtn').disabled=false;
+  if(x.status==200){
+   $('photoMsg').textContent='GIF uploaded successfully! ('+Math.round(file.size/1024)+' KB)';
+   $('photoBar').style.width='100%';
+   loadPhotos();
+  } else {
+   $('photoMsg').textContent='Upload failed: '+x.responseText;
+  }
+ };
+ x.onerror=function(){
+  $('photoUpBtn').disabled=false;
+  $('photoMsg').textContent='Upload error';
+ };
+ x.send(fd);
 }
 
 function initCropBox(){

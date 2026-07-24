@@ -4,10 +4,40 @@
 #include "Net.h"
 #include "Clock.h"
 #include "Platform.h"
+#include "MontserratBold.h"
 #include <ArduinoJson.h>
 #include <Arduino_GFX_Library.h>
 
 ClockMode g_clockMode;
+
+static void drawMontserratCentered(const char* txt, int yCenter, const GFXfont* font, uint16_t color) {
+  Arduino_GFX* g = gfxDev();
+  if (!g || !txt || !txt[0]) return;
+
+  g->setFont(font);
+  g->setTextColor(color);
+
+  int16_t x1 = 0, y1 = 0;
+  uint16_t w = 0, h = 0;
+  g->getTextBounds((char*)txt, 0, 0, &x1, &y1, &w, &h);
+
+  int x = (240 - (int)w) / 2;
+  if (x < 0) x = 0;
+
+  int yBase = yCenter + (int)h / 2 - (int)y1 / 2;
+  g->setCursor(x, yBase);
+  g->print(txt);
+}
+
+static void drawMontserratLeft(const char* txt, int x, int yBase, const GFXfont* font, uint16_t color) {
+  Arduino_GFX* g = gfxDev();
+  if (!g || !txt || !txt[0]) return;
+
+  g->setFont(font);
+  g->setTextColor(color);
+  g->setCursor(x, yBase);
+  g->print(txt);
+}
 
 void ClockMode::begin(const Settings& s) {
   m_weather.valid = false;
@@ -174,26 +204,12 @@ void ClockMode::render(const Settings& s) {
   }
 
   uint8_t theme = s.clock.theme;
-
-  // Resolve font scale: 0 = theme default, 1-5 = user override
-  uint8_t timeSz = s.clock.fontScale > 0 ? s.clock.fontScale : (theme == 0 ? (s.clock.showSeconds ? 4 : 5) : (theme == 2 ? 5 : 4));
-  uint8_t dateSz = s.clock.fontScale > 0 ? max((uint8_t)1, (uint8_t)(timeSz > 2 ? 2 : 1)) : (theme == 0 ? 2 : 2);
-
   uint16_t tc = s.clock.timeColor;
   uint16_t dc = s.clock.dateColor;
   uint16_t ac = s.clock.accentColor;
 
-  // Helper: draw text bold or normal based on settings
-  auto drawT = [&](const char* txt, int y, uint8_t sz, uint16_t color) {
-    if (s.clock.boldText) gfxDrawCenteredBold(txt, y, sz, color);
-    else gfxDrawCentered(txt, y, sz, color);
-  };
-  auto drawL = [&](const char* txt, int x, int y, uint8_t sz, uint16_t color) {
-    Arduino_GFX* g = gfxDev();
-    if (!g) return;
-    if (s.clock.boldText) gfxPrintBold(g, x, y, txt, color, sz);
-    else gfxPrint(x, y, txt, color, sz);
-  };
+  const GFXfont* timeFont = s.clock.showSeconds ? &MontserratBold28pt7b : &MontserratBold40pt7b;
+  const GFXfont* dateFont = &MontserratBold18pt7b;
 
   if (m_fullRepaint) {
     m_fullRepaint = false;
@@ -201,24 +217,24 @@ void ClockMode::render(const Settings& s) {
   }
 
   if (theme == 0) {
-    // Theme 0: Giant Fullscreen Clock
-    int yOff = s.clock.showSeconds ? 65 : 55;
-    int timeH = timeSz * 8 + 6;
+    // Theme 0: Giant Fullscreen Clock rendered in Montserrat-Bold
+    int yOff = s.clock.showSeconds ? 80 : 85;
+    int timeH = s.clock.showSeconds ? 45 : 55;
 
     // Erase ONLY the time bounding box to prevent full-screen flickering
-    gfxFillRect(0, yOff - 2, 240, timeH, s.clock.bgColor);
+    gfxFillRect(0, yOff - 25, 240, timeH, s.clock.bgColor);
 
-    drawT(timeStr, yOff, timeSz, tc);
+    drawMontserratCentered(timeStr, yOff, timeFont, tc);
 
     if (s.clock.showDate) {
-      int dateY = (timeSz >= 6) ? 168 : 142;
-      gfxFillRoundRect(10, dateY, 220, 32, 8, 0x18C6);
-      gfxDrawRoundRect(10, dateY, 220, 32, 8, dc);
-      drawT(dateStr, dateY + 8, dateSz, dc);
+      int dateY = 150;
+      gfxFillRoundRect(10, dateY - 14, 220, 36, 8, 0x18C6);
+      gfxDrawRoundRect(10, dateY - 14, 220, 36, 8, dc);
+      drawMontserratCentered(dateStr, dateY + 4, dateFont, dc);
     }
 
     gfxFillRect(0, 215, 240, 25, s.clock.bgColor);
-    drawT(ipBuf, 218, 1, ac);
+    gfxDrawCentered(ipBuf, 218, 1, ac);
   } else if (theme == 1) {
     // Theme 1: Weather & Clock Station
     gfxFillRoundRect(8, 8, 224, 120, 10, 0x0186);
@@ -227,82 +243,82 @@ void ClockMode::render(const Settings& s) {
     if (m_weather.valid) {
       String cityStr = m_weather.city;
       cityStr.toUpperCase();
-      drawL(cityStr.c_str(), 18, 18, 2, ac);
+      drawMontserratLeft(cityStr.c_str(), 18, 32, &MontserratBold18pt7b, ac);
 
       char tempBuf[16];
       snprintf(tempBuf, sizeof(tempBuf), "%+.1f%s", m_weather.temp, (s.clock.weatherUnits == "f") ? "F" : "C");
-      drawL(tempBuf, 18, 46, 4, tc);
+      drawMontserratLeft(tempBuf, 18, 75, &MontserratBold28pt7b, tc);
 
       String desc = m_weather.description;
       desc.toUpperCase();
-      drawL(desc.c_str(), 18, 94, 2, 0xFFFF);
+      gfxPrint(18, 98, desc.c_str(), 0xFFFF, 2);
     } else {
-      drawL("WEATHER SYNC...", 18, 45, 2, ac);
-      drawL(m_weather.error.length() ? m_weather.error.c_str() : "Connecting...", 18, 80, 2, 0xFF5C);
+      gfxPrint(18, 45, "WEATHER SYNC...", ac, 2);
+      gfxPrint(18, 80, m_weather.error.length() ? m_weather.error.c_str() : "Connecting...", 0xFF5C, 2);
     }
 
     // Bottom Clock Card
     gfxFillRoundRect(8, 134, 224, 98, 10, 0x08C9);
     gfxDrawRoundRect(8, 134, 224, 98, 10, 0x22F3);
-    drawT(timeStr, 148, timeSz, 0xFFFF);
-    drawT(dateStr, 198, dateSz, ac);
+    drawMontserratCentered(timeStr, 170, &MontserratBold28pt7b, 0xFFFF);
+    gfxDrawCentered(dateStr, 208, 1, ac);
   } else if (theme == 2) {
     // Theme 2: Modern OLED Dashboard Clock
     gfxFillRoundRect(8, 8, 224, 130, 12, 0x1084);
     gfxDrawRoundRect(8, 8, 224, 130, 12, 0xA2FD);
-    drawT(timeStr, 35, timeSz, 0xFFFF);
-    if (s.clock.showDate) drawT(dateStr, 98, dateSz, 0xA2FD);
+    drawMontserratCentered(timeStr, 65, timeFont, 0xFFFF);
+    if (s.clock.showDate) drawMontserratCentered(dateStr, 112, &MontserratBold18pt7b, 0xA2FD);
 
     gfxFillRoundRect(8, 144, 224, 88, 12, 0x0842);
     gfxDrawRoundRect(8, 144, 224, 88, 12, 0x2126);
     if (m_weather.valid) {
       String cityStr = m_weather.city;
       cityStr.toUpperCase();
-      drawL(cityStr.c_str(), 18, 160, 2, 0xFFFF);
+      drawMontserratLeft(cityStr.c_str(), 18, 178, &MontserratBold18pt7b, 0xFFFF);
 
       char tempBuf[16];
       snprintf(tempBuf, sizeof(tempBuf), "%+.1f%s", m_weather.temp, (s.clock.weatherUnits == "f") ? "F" : "C");
-      drawL(tempBuf, 135, 155, 3, 0xA2FD);
-      drawL("LIVE WEATHER", 18, 198, 1, ac);
+      drawMontserratLeft(tempBuf, 140, 178, &MontserratBold18pt7b, 0xA2FD);
+      gfxPrint(18, 202, "LIVE WEATHER", ac, 1);
     } else {
-      drawL("WEATHER: OFFLINE", 18, 175, 2, 0x91A4);
+      gfxPrint(18, 180, "WEATHER: OFFLINE", 0x91A4, 2);
     }
   } else {
     // Theme 3: 3-Day Weather Forecast Breakdown
     gfxFillRoundRect(6, 6, 228, 72, 8, 0x0944);
     gfxDrawRoundRect(6, 6, 228, 72, 8, 0x1390);
-    drawL("TODAY", 16, 16, 2, tc);
+    gfxPrint(16, 16, "TODAY", tc, 2);
     if (m_weather.valid) {
       char tempBuf[16];
       snprintf(tempBuf, sizeof(tempBuf), "%+.1f%s", m_weather.temp, (s.clock.weatherUnits == "f") ? "F" : "C");
-      drawL(tempBuf, 135, 12, 3, 0x4EE6);
-      drawL(m_weather.description.c_str(), 16, 45, 2, 0xFFFF);
+      drawMontserratLeft(tempBuf, 135, 42, &MontserratBold18pt7b, 0x4EE6);
+      gfxPrint(16, 45, m_weather.description.c_str(), 0xFFFF, 2);
     } else {
-      drawL("Syncing...", 120, 25, 2, 0x91A4);
+      gfxPrint(120, 25, "Syncing...", 0x91A4, 2);
     }
 
     gfxFillRoundRect(6, 84, 228, 72, 8, 0x1084);
     gfxDrawRoundRect(6, 84, 228, 72, 8, 0x2126);
-    drawL("TOMORROW", 16, 94, 2, dc);
+    gfxPrint(16, 94, "TOMORROW", dc, 2);
     if (m_weather.valid) {
       char tempBuf[16];
       snprintf(tempBuf, sizeof(tempBuf), "%+.1f%s", m_weather.temp + 1.5f, (s.clock.weatherUnits == "f") ? "F" : "C");
-      drawL(tempBuf, 135, 90, 3, 0xFFB6);
-      drawL("PARTLY CLOUDY", 16, 123, 2, 0xFFFF);
+      drawMontserratLeft(tempBuf, 135, 120, &MontserratBold18pt7b, 0xFFB6);
+      gfxPrint(16, 123, "PARTLY CLOUDY", 0xFFFF, 2);
     } else {
-      drawL("Syncing...", 120, 103, 2, 0x91A4);
+      gfxPrint(120, 103, "Syncing...", 0x91A4, 2);
     }
 
     gfxFillRoundRect(6, 162, 228, 72, 8, 0x0186);
     gfxDrawRoundRect(6, 162, 228, 72, 8, 0x1C17);
-    drawL("SAT 25 JUL", 16, 172, 2, ac);
+    gfxPrint(16, 172, "SAT 25 JUL", ac, 2);
     if (m_weather.valid) {
       char tempBuf[16];
       snprintf(tempBuf, sizeof(tempBuf), "%+.1f%s", m_weather.temp - 2.0f, (s.clock.weatherUnits == "f") ? "F" : "C");
-      drawL(tempBuf, 135, 168, 3, 0x763F);
-      drawL("MOSTLY SUNNY", 16, 201, 2, 0xFFFF);
+      drawMontserratLeft(tempBuf, 135, 198, &MontserratBold18pt7b, 0x763F);
+      gfxPrint(16, 201, "MOSTLY SUNNY", 0xFFFF, 2);
     } else {
-      drawL("Syncing...", 120, 181, 2, 0x91A4);
+      gfxPrint(120, 181, "Syncing...", 0x91A4, 2);
     }
   }
 }

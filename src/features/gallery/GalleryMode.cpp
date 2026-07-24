@@ -36,7 +36,7 @@ void GalleryMode::scanPhotos() {
     if (lastSlash >= 0) name = name.substring(lastSlash + 1);
     String lowerName = name;
     lowerName.toLowerCase();
-    if (lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg") || lowerName.endsWith(".raw")) {
+    if (lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg") || lowerName.endsWith(".gif") || lowerName.endsWith(".raw")) {
       m_photos[m_photoCount].name = "/photos/" + name;
       m_photos[m_photoCount].size = dir.fileSize();
       m_photoCount++;
