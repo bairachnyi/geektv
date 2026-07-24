@@ -36,8 +36,23 @@ void TickerSettings::setDefaults() {
   showPageDots = true;
   showPortfolio = true;   // only visible once a symbol has qty+cost set
 
-  symbolCount = 0;
-  for (uint8_t i = 0; i < MAX_SYMBOLS; i++) {
+  symbolCount = 3;
+  strlcpy(symbols[0].symbol, "BTC-USD", MAX_SYMBOL_LEN);
+  strlcpy(symbols[0].name, "Bitcoin", MAX_NAME_LEN);
+  symbols[0].source = SRC_YAHOO;
+  symbols[0].qty = 0; symbols[0].cost = 0;
+
+  strlcpy(symbols[1].symbol, "AAPL", MAX_SYMBOL_LEN);
+  strlcpy(symbols[1].name, "Apple", MAX_NAME_LEN);
+  symbols[1].source = SRC_YAHOO;
+  symbols[1].qty = 0; symbols[1].cost = 0;
+
+  strlcpy(symbols[2].symbol, "NVDA", MAX_SYMBOL_LEN);
+  strlcpy(symbols[2].name, "NVIDIA", MAX_NAME_LEN);
+  symbols[2].source = SRC_YAHOO;
+  symbols[2].qty = 0; symbols[2].cost = 0;
+
+  for (uint8_t i = 3; i < MAX_SYMBOLS; i++) {
     symbols[i].symbol[0] = 0;
     symbols[i].name[0] = 0;
     symbols[i].source = DEFAULT_SOURCE;

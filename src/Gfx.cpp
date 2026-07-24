@@ -94,7 +94,10 @@ void gfxSetRotation(uint8_t r) {
 
 // ---- Drawing Primitives ---------------------------------------------------
 void gfxClear() {
-  if (gfx) gfx->fillScreen(C_BLACK);
+  if (gfx) {
+    gfx->setFont(nullptr);
+    gfx->fillScreen(C_BLACK);
+  }
 }
 
 void gfxDrawPixel(int x, int y, uint16_t color) {
@@ -119,6 +122,7 @@ void gfxDrawRoundRect(int x, int y, int w, int h, int r, uint16_t color) {
 
 void gfxPrint(int x, int y, const char* text, uint16_t color, uint8_t size) {
   if (!gfx) return;
+  gfx->setFont(nullptr);
   gfx->setTextSize(size);
   gfx->setTextColor(color);
   gfx->setCursor(x, y);
@@ -127,6 +131,7 @@ void gfxPrint(int x, int y, const char* text, uint16_t color, uint8_t size) {
 
 void gfxHeader(const char* title, const char* rightText) {
   if (!gfx) return;
+  gfx->setFont(nullptr);
   gfx->setTextSize(1);
   gfx->setTextColor(0x39E7);
   gfx->setCursor(4, 4);
@@ -143,6 +148,7 @@ void gfxHeader(const char* title, const char* rightText) {
 
 void gfxFooter(const char* text, uint16_t color) {
   if (!gfx) return;
+  gfx->setFont(nullptr);
   gfx->drawFastHLine(0, 224, 240, 0x1930);
   gfx->setTextSize(1);
   gfx->setTextColor(color);
@@ -155,6 +161,7 @@ int gfxTextW(const char* s, uint8_t size) { return (int)strlen(s) * 6 * size; }
 
 void gfxDrawCentered(const char* s, int y, uint8_t size, uint16_t color) {
   if (!gfx) return;
+  gfx->setFont(nullptr);
   int x = (TFT_WIDTH - gfxTextW(s, size)) / 2;
   if (x < 0) x = 0;
   gfx->setTextSize(size);

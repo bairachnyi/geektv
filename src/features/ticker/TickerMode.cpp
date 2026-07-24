@@ -58,6 +58,7 @@ static void drawStock(const StockData& d, uint8_t pageIndex, uint8_t pageCount,
                       const Settings& s) {
   Arduino_GFX* gfx = gfxDev();
   if (!gfx) return;
+  gfx->setFont(nullptr);
   gfx->fillScreen(C_BLACK);
 
   // No data yet for this symbol.

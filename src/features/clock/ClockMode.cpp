@@ -321,4 +321,7 @@ void ClockMode::render(const Settings& s) {
       gfxPrint(120, 181, "Syncing...", 0x91A4, 2);
     }
   }
+
+  Arduino_GFX* g = gfxDev();
+  if (g) g->setFont(nullptr);
 }
