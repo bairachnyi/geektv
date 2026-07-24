@@ -113,7 +113,7 @@ const uint8_t MontserratBold18pt7bBitmaps[] PROGMEM = {
   0x0C, 0x30, 0x00, 0x01, 0xE3, 0xC1, 0xC3, 0x87, 0x0E, 0x1C, 0x3C, 0x78, 0xE1, 0xC3, 0x87, 0x0E,
   0x7C, 0xF0, 0x00, 0x00, 0x07, 0x19, 0xFF, 0x33, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
-const GFXglyph MontserratBold18pt7bGlyphs[] PROGMEM = {
+const GFXglyph MontserratBold18pt7bGlyphs[] = {
   { 0, 0, 0, 5, 0, 0 },
   { 0, 5, 14, 5, 0, -13 },
   { 9, 8, 13, 8, 0, -13 },
@@ -210,7 +210,7 @@ const GFXglyph MontserratBold18pt7bGlyphs[] PROGMEM = {
   { 1715, 7, 18, 7, 0, -14 },
   { 1731, 11, 9, 11, 0, -9 },
 };
-const GFXfont MontserratBold18pt7b PROGMEM = {
+const GFXfont MontserratBold18pt7b = {
   (uint8_t *)MontserratBold18pt7bBitmaps,
   (GFXglyph *)MontserratBold18pt7bGlyphs,
   0x20, 0x7E, 22
@@ -472,7 +472,7 @@ const uint8_t MontserratBold28pt7bBitmaps[] PROGMEM = {
   0x87, 0xFF, 0xC3, 0x0F, 0xC1, 0x83, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
-const GFXglyph MontserratBold28pt7bGlyphs[] PROGMEM = {
+const GFXglyph MontserratBold28pt7bGlyphs[] = {
   { 0, 0, 0, 8, 0, 0 },
   { 0, 8, 21, 8, 0, -20 },
   { 21, 12, 20, 12, 0, -20 },
@@ -569,7 +569,7 @@ const GFXglyph MontserratBold28pt7bGlyphs[] PROGMEM = {
   { 3988, 11, 27, 11, 0, -21 },
   { 4026, 17, 13, 17, 0, -13 },
 };
-const GFXfont MontserratBold28pt7b PROGMEM = {
+const GFXfont MontserratBold28pt7b = {
   (uint8_t *)MontserratBold28pt7bBitmaps,
   (GFXglyph *)MontserratBold28pt7bGlyphs,
   0x20, 0x7E, 32
@@ -1082,7 +1082,7 @@ const uint8_t MontserratBold40pt7bBitmaps[] PROGMEM = {
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
-const GFXglyph MontserratBold40pt7bGlyphs[] PROGMEM = {
+const GFXglyph MontserratBold40pt7bGlyphs[] = {
   { 0, 0, 0, 11, 0, 0 },
   { 0, 12, 29, 12, 0, -28 },
   { 44, 17, 28, 17, 0, -28 },
@@ -1179,7 +1179,7 @@ const GFXglyph MontserratBold40pt7bGlyphs[] PROGMEM = {
   { 7941, 16, 38, 16, 0, -30 },
   { 8017, 24, 19, 24, 0, -19 },
 };
-const GFXfont MontserratBold40pt7b PROGMEM = {
+const GFXfont MontserratBold40pt7b = {
   (uint8_t *)MontserratBold40pt7bBitmaps,
   (GFXglyph *)MontserratBold40pt7bGlyphs,
   0x20, 0x7E, 44
