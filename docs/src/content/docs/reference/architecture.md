@@ -36,7 +36,9 @@ LittleFS и место для двух sketch copies, необходимое OTA
 | `src/BearSslTuning.cpp` | Ограничения TLS/ECC для памяти ESP8266. |
 | `src/Mode.h` | Общий интерфейс `DisplayMode`. |
 | `src/features/ticker/` | Sources, stock model и ticker rendering. |
-| `src/features/usage/` | AI usage pull/push, compact data model и mascot animation. |
+| `src/features/clock/` | Два clock layouts, current weather и real three-day forecast. |
+| `src/features/gallery/` | JPEG и streaming animated GIF renderer из LittleFS. |
+| `src/features/codex/` | Codex pull/push model, structured errors и три usage pages. |
 | `src/features/github/` | GitHub feed client, event model, GH//STAT rendering и animations. |
 | `emulator/server.mjs` | GitHub bridge, GitHub API normalization, cache, credentials и browser emulator. |
 | `partitions/` | ESP32 partition layout. |
@@ -93,7 +95,7 @@ Feature обычно разделён на `*Client`, `*Data` и `*Mode`: сет
 
 Постоянная конфигурация хранится в `/config.json`. Верхний уровень содержит
 Wi-Fi, AP, hostname, display и carousel; feature-настройки находятся в объектах
-`ticker`, `usage`, `github`, `clock`.
+`ticker`, `github`, `clock`, `gallery`, `codex`.
 
 JSON update частичный: отсутствующие keys сохраняют старые значения. Reader
 принимает некоторые legacy flat fields и после следующего сохранения переводит
@@ -115,8 +117,7 @@ passwords, поэтому backup нужно защищать.
 - wildcard DNS;
 - redirect captive-portal probe и unknown URLs на settings page.
 
-В STA mode регистрируется `_http._tcp` mDNS; usage builds также публикуют
-`_ai-usage._tcp` с id, version и push path.
+В STA mode регистрируется `_http._tcp` mDNS.
 
 ## Дисплей
 
@@ -209,7 +210,7 @@ image до запуска тяжёлых features и снова reboot посл�
 ## Ограничения ESP8266
 
 - 80 KB RAM и чувствительность TLS к крупнейшему непрерывному heap block;
-- максимум 8 tickers, 8 GitHub events, 24 aircraft, 6 airports и 4 Wi-Fi entries;
+- максимум 8 tickers, 8 GitHub events и 4 Wi-Fi entries;
 - ArduinoJson filters обязательны для крупных ответов;
 - network requests не должны выполняться каждый display frame;
 - secrets нельзя компилировать в firmware;

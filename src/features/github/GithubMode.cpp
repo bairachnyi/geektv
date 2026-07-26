@@ -78,6 +78,11 @@ static const char* errorTitle(const char* code, bool stale) {
   if (!strcmp(code, "RATE_LIMITED")) return "RATE LIMITED";
   if (!strcmp(code, "GITHUB_TIMEOUT")) return "GITHUB TIMEOUT";
   if (!strcmp(code, "GITHUB_OFFLINE") || !strcmp(code, "BRIDGE_OFFLINE")) return "BRIDGE OFFLINE";
+  if (!strcmp(code, "WEBHOOK_SIGNATURE_INVALID")) return "BAD WEBHOOK SIG";
+  if (!strcmp(code, "WEBHOOK_NOT_CONFIGURED")) return "WEBHOOK NOT SET";
+  if (!strcmp(code, "WEBHOOK_STALE")) return "WEBHOOK STALE";
+  if (!strcmp(code, "FEED_TIMEOUT")) return "FEED TIMEOUT";
+  if (!strcmp(code, "FEED_URL_LOOP")) return "FEED URL LOOP";
   if (!strcmp(code, "BAD_RESPONSE") || !strcmp(code, "GITHUB_BAD_RESPONSE")) return "BAD RESPONSE";
   if (!strcmp(code, "LOW_MEMORY")) return "LOW MEMORY";
   if (!strcmp(code, "FEED_URL_INVALID")) return "BAD FEED URL";
@@ -101,13 +106,15 @@ static const GithubRun* visibleRunAt(const GithubData& d, uint8_t visibleIndex) 
   return nullptr;
 }
 
-static void drawHeader(Arduino_GFX* gfx, uint8_t page, uint8_t pages, bool priority) {
+static void drawHeader(Arduino_GFX* gfx, uint8_t page, uint8_t pages, bool priority, bool warning, bool stale) {
   gfx->setTextSize(2); gfx->setTextColor(C_WHITE); gfx->setCursor(7, 7); gfx->print("GH");
   gfx->setTextColor(GH_CYAN); gfx->print("//");
   gfx->setTextColor(C_WHITE); gfx->print("STAT");
-  uint16_t liveColor = priority ? GH_AMBER : GH_CYAN;
+  uint16_t liveColor = (warning || stale) ? GH_RED : (priority ? GH_AMBER : GH_CYAN);
   gfx->fillCircle(174, 14, 3, liveColor);
   gfx->setTextSize(1); gfx->setTextColor(liveColor); gfx->setCursor(181, 10); gfx->print(priority ? "FOCUS" : "LIVE");
+  if (stale) { gfx->setCursor(181, 10); gfx->print("STALE"); }
+  else if (warning && !priority) { gfx->setCursor(181, 10); gfx->print("WARN"); }
   if (pages > 1) {
     gfx->setTextColor(GH_MUTED); gfx->setCursor(216, 10); gfx->print(page + 1); gfx->print('/'); gfx->print(pages);
   }
@@ -185,8 +192,14 @@ static void drawGithub(const GithubData& d, uint8_t page, bool configured, bool 
   gfx->fillScreen(GH_BG);
   uint8_t visibleCount = visibleRunCount(d);
   uint8_t pages = (visibleCount + 1) / 2; if (!pages) pages = 1;
-  drawHeader(gfx, page, pages, d.runningCount > 0);
-  if (!configured || !d.valid || d.error || stale) { drawErrorScreen(gfx, d, configured, stale, frame); return; }
+  drawHeader(gfx, page, pages, d.runningCount > 0, d.error, stale);
+  // Keep displaying the last valid events when one source is degraded or the
+  // feed is stale. A fatal error screen is reserved for cases with no usable
+  // event data at all.
+  if (!configured || !d.valid || (d.error && !d.runCount)) {
+    drawErrorScreen(gfx, d, configured, stale, frame);
+    return;
+  }
 
   drawSummary(gfx, 8, "R", d.runningCount, GH_CYAN);
   drawSummary(gfx, 83, "P", d.successCount, GH_GREEN);

@@ -19,16 +19,16 @@ const framesPerScene = 16;
 const fps = 4;
 
 const activeDemo = [
-  event('ananas-it/customer-portal-production', 'deployment', 'Deploy production with database migrations', 'feature/github-deployment-dashboard', 'in_progress', '', '23 JUL 14:41', true, 51),
-  event('ananas-it/mobile', 'pull_request', 'PR #82 checks and quality gates', 'feature/login-redesign', 'queued', '', '23 JUL 14:40', false, 18),
+  event('acme-labs/customer-portal-production', 'deployment', 'Deploy production with database migrations', 'feature/github-deployment-dashboard', 'in_progress', '', '23 JUL 14:41', true, 51),
+  event('acme-labs/mobile', 'pull_request', 'PR #82 checks and quality gates', 'feature/login-redesign', 'queued', '', '23 JUL 14:40', false, 18),
 ];
 const historyDemo = [
-  event('bairachnyi/smalltv-ultra', 'action', 'Build firmware and emulator', 'main', 'completed', 'success', '23 JUL 14:39', true),
-  event('ananas-it/api', 'action', 'Tests and production build', 'release/v4', 'completed', 'failure', '23 JUL 14:37'),
-  event('ananas-it/infrastructure', 'deployment', 'Deploy staging environment', 'main', 'completed', 'success', '23 JUL 14:31'),
-  event('ananas-it/web', 'release', 'Release v3.8.0', 'main', 'completed', 'success', '23 JUL 14:22'),
-  event('ananas-it/mobile', 'pull_request', 'PR #79 checks', 'fix/push-notifications', 'completed', 'failure', '23 JUL 14:11'),
-  event('bairachnyi/portfolio', 'deployment', 'Deploy production', 'main', 'completed', 'success', '23 JUL 13:58'),
+  event('octo-user/demo-dashboard', 'action', 'Build firmware and emulator', 'main', 'completed', 'success', '23 JUL 14:39', true),
+  event('acme-labs/api', 'action', 'Tests and production build', 'release/v4', 'completed', 'failure', '23 JUL 14:37'),
+  event('acme-labs/infrastructure', 'deployment', 'Deploy staging environment', 'main', 'completed', 'success', '23 JUL 14:31'),
+  event('acme-labs/web', 'release', 'Release v3.8.0', 'main', 'completed', 'success', '23 JUL 14:22'),
+  event('acme-labs/mobile', 'pull_request', 'PR #79 checks', 'fix/push-notifications', 'completed', 'failure', '23 JUL 14:11'),
+  event('octo-user/portfolio-demo', 'deployment', 'Deploy production', 'main', 'completed', 'success', '23 JUL 13:58'),
 ];
 
 function event(repo, type, workflow, branch, status, conclusion, when, latest = false, age = 0) {

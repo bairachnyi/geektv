@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 import { GithubWebhookStore, webhookTest } from './github-webhooks.mjs';
 
-const repository = { full_name: 'ananas-it/web' };
+const repository = { full_name: 'acme-labs/web' };
 
 test('normalizes active and completed workflow runs', () => {
   const active = webhookTest.normalize('workflow_run', {
@@ -46,7 +46,7 @@ test('upserts PR state from pull_request and check_suite events', () => {
     check_suite: { status: 'completed', conclusion: 'success', head_branch: 'feature', updated_at: '2026-07-23T00:02:00Z', pull_requests: [{ number: 42 }] },
   }).status, 202);
 
-  const events = store.events({ owners: ['ananas-it'] });
+  const events = store.events({ owners: ['acme-labs'] });
   assert.equal(events.length, 1);
   assert.equal(events[0].conclusion, 'success');
   assert.equal(JSON.parse(readFileSync(file, 'utf8')).deliveries.length, 2);

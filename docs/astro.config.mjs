@@ -1,15 +1,15 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 
-// Deployed from the bairachnyi/smalltv-ultra fork.
+// Public project documentation deployment.
 export default defineConfig({
   site: 'https://bairachnyi.github.io',
   base: '/smalltv-ultra',
   integrations: [
     starlight({
-      title: 'SmallTV Ultra',
+      title: 'GeekTV',
       description:
-        'Custom firmware for GeekMagic SmallTV: GitHub operations dashboard, ticker, AI usage meter, web settings and OTA updates.',
+        'Open firmware for GeekMagic SmallTV: clocks, weather, gallery, Codex, GitHub operations, ticker, web settings and OTA.',
       logo: {
         src: './src/assets/logo.svg',
         replacesTitle: false,
@@ -18,11 +18,11 @@ export default defineConfig({
         {
           icon: 'github',
           label: 'GitHub',
-          href: 'https://github.com/bairachnyi/smalltv-ultra',
+          href: 'https://github.com/bairachnyi/geektv',
         },
       ],
       editLink: {
-        baseUrl: 'https://github.com/bairachnyi/smalltv-ultra/edit/main/docs/',
+        baseUrl: 'https://github.com/bairachnyi/geektv/edit/main/docs/',
       },
       sidebar: [
         { label: 'Home', link: '/' },
@@ -38,7 +38,9 @@ export default defineConfig({
           label: 'Features',
           items: [
             { label: 'Stock and crypto ticker', link: '/features/ticker/' },
-            { label: 'AI usage meter', link: '/features/usage/' },
+            { label: 'Clock and weather', link: '/features/clock-weather/' },
+            { label: 'Gallery', link: '/features/gallery/' },
+            { label: 'Codex usage', link: '/features/codex/' },
             { label: 'GitHub GH//STAT', link: '/features/github/' },
           ],
         },

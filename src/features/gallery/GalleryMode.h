@@ -2,6 +2,7 @@
 #include "Mode.h"
 #include "Settings.h"
 #include <Arduino.h>
+#include <AnimatedGIF.h>
 
 struct PhotoItem {
   String name;
@@ -25,11 +26,17 @@ private:
   void scanPhotos();
   void nextPhoto(const Settings& s);
   void renderCurrent(const Settings& s);
+  void closeGif();
+  bool openGif(const String& path);
+  void serviceGif();
 
   PhotoItem m_photos[MAX_PHOTOS];
   uint8_t   m_photoCount = 0;
   int8_t    m_currentIdx = -1;
   uint32_t  m_nextRotateMs = 0;
+  AnimatedGIF* m_gif = nullptr;
+  bool      m_gifActive = false;
+  uint32_t  m_nextGifFrameMs = 0;
 };
 
 extern GalleryMode g_galleryMode;

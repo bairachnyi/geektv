@@ -7,8 +7,8 @@
 #include "Gfx.h"
 #include "OtaUpdate.h"
 #include "StockClient.h"
-#include "UsageClient.h"
 #include "GithubClient.h"
+#include "features/codex/CodexClient.h"
 #include "Clock.h"
 
 // Defined in main.cpp — re-init every mode + force a repaint after a config change.
@@ -100,7 +100,6 @@ static void handleGetConfig() {
   // Which features are compiled in (so a lean build hides the tabs it dropped).
   JsonObject feat = root["features"].to<JsonObject>();
   feat["ticker"]  = (bool)WITH_TICKER;
-  feat["usage"]   = (bool)WITH_USAGE;
   feat["github"]  = (bool)WITH_GITHUB;
   feat["clock"]   = (bool)WITH_CLOCK;
   feat["gallery"] = (bool)WITH_GALLERY;
@@ -139,6 +138,26 @@ static void handleStatus() {
   o["night"]     = clockNightActive();   // dimming now
   o["nightHeld"] = clockNightHeld();      // in the window but waiting for a fresh NTP sync
   o["clockFresh"] = clockTrusted();       // last NTP sync within the trust window
+
+  {
+    const CodexData& c = codexGet();
+    JsonObject cx = o["codex"].to<JsonObject>();
+    cx["valid"] = c.valid;
+    cx["error"] = c.error;
+    uint32_t codexFreshMs = (uint32_t)S->codex.pollSec * 3000UL;
+    if (codexFreshMs < 120000UL) codexFreshMs = 120000UL;
+    cx["fresh"] = codexFresh(codexFreshMs);
+    cx["errorCode"] = c.errorCode;
+    cx["errorMessage"] = c.errorMessage;
+    if (c.valid) {
+      cx["primaryPct"] = c.primaryPct;
+      cx["primaryReset"] = c.primaryReset;
+      cx["secondaryPct"] = c.secondaryPct;
+      cx["todayTokens"] = c.todayTokens;
+      cx["todayCalls"] = c.todayCalls;
+      cx["weekTokens"] = c.weekTokens;
+    }
+  }
 
 #if WITH_TICKER
   JsonArray arr = o["tickers"].to<JsonArray>();
@@ -302,17 +321,11 @@ static void handleSelfUpdate() {
   server.send(200, "application/json", "{\"ok\":true}");
 }
 
-// Push endpoint: a trusted LAN bridge POSTs compact AI usage when the device
-// cannot pull it. Legacy Claude payload keys remain accepted.
-static void handleUsagePush() {
-  if (!server.hasArg("plain")) { server.send(400, "text/plain", "no body"); return; }
-#if WITH_USAGE
-  bool ok = usageApply(server.arg("plain"));
-#else
-  bool ok = false;
-#endif
+static void handleCodexPush() {
+  if (!requireAuth()) return;
+  bool ok = codexApply(server.arg("plain"));
   server.send(ok ? 200 : 400, "application/json",
-              ok ? "{\"ok\":true}" : "{\"ok\":false}");
+              ok ? "{\"ok\":true}" : "{\"ok\":false,\"error\":\"invalid Codex payload\"}");
 }
 
 // ---- OTA ------------------------------------------------------------------
@@ -362,11 +375,15 @@ static void handleGetPhotos() {
 
   Dir dir = LittleFS.openDir("/photos");
   while (dir.next()) {
-    String name = dir.fileName();
-    if (name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png") || name.endsWith(".gif") || name.endsWith(".raw")) {
+    String path = dir.fileName();
+    if (!path.startsWith("/photos/")) path = "/photos/" + path;
+    String name = path.substring(path.lastIndexOf('/') + 1);
+    String lower = name;
+    lower.toLowerCase();
+    if (lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".gif") || lower.endsWith(".raw")) {
       JsonObject o = arr.add<JsonObject>();
       o["name"] = name;
-      o["path"] = "/photos/" + name;
+      o["path"] = path;
       o["size"] = dir.fileSize();
     }
   }
@@ -393,6 +410,10 @@ static void handlePhotoDelete() {
 }
 
 static File s_uploadFile;
+static bool s_uploadOk = false;
+static size_t s_uploadBytes = 0;
+static String s_uploadError;
+static String s_uploadPath;
 static void handlePhotoUploadDone() {
   if (!checkAuth()) {
     server.send(401, "application/json", "{\"ok\":false,\"error\":\"auth required\"}");
@@ -402,6 +423,12 @@ static void handlePhotoUploadDone() {
     s_uploadFile.close();
   }
   server.sendHeader("Connection", "close");
+  if (!s_uploadOk) {
+    if (s_uploadPath.length() && LittleFS.exists(s_uploadPath)) LittleFS.remove(s_uploadPath);
+    String body = "{\"ok\":false,\"error\":\"" + s_uploadError + "\"}";
+    server.send(400, "application/json", body);
+    return;
+  }
   server.send(200, "application/json", "{\"ok\":true}");
   appInvalidate();
 }
@@ -410,6 +437,10 @@ static void handlePhotoUpload() {
   if (!checkAuth()) return;
   HTTPUpload& up = server.upload();
   if (up.status == UPLOAD_FILE_START) {
+    s_uploadOk = false;
+    s_uploadBytes = 0;
+    s_uploadError = "";
+    s_uploadPath = "";
     if (!LittleFS.exists("/photos")) LittleFS.mkdir("/photos");
     String filename = up.filename;
     int lastSlash = filename.lastIndexOf('/');
@@ -419,20 +450,41 @@ static void handlePhotoUpload() {
     filename.toLowerCase();
     filename.replace(" ", "_");
     filename.replace("%20", "_");
-    
-    if (!filename.endsWith(".jpg") && !filename.endsWith(".jpeg") && !filename.endsWith(".png") && !filename.endsWith(".gif")) {
-      filename += ".jpg";
+    for (size_t i = 0; i < filename.length(); i++) {
+      char c = filename[i];
+      if (!isalnum((unsigned char)c) && c != '.' && c != '_' && c != '-') filename.setCharAt(i, '_');
+    }
+    if (!filename.endsWith(".jpg") && !filename.endsWith(".jpeg") && !filename.endsWith(".gif")) {
+      s_uploadError = "Only JPEG and GIF files are supported";
+      return;
     }
 
     String targetPath = "/photos/" + filename;
+    s_uploadPath = targetPath;
     if (LittleFS.exists(targetPath)) LittleFS.remove(targetPath);
     s_uploadFile = LittleFS.open(targetPath, "w");
+    if (!s_uploadFile) s_uploadError = "Cannot create the photo file";
+    else s_uploadOk = true;
   } else if (up.status == UPLOAD_FILE_WRITE) {
-    if (s_uploadFile) s_uploadFile.write(up.buf, up.currentSize);
+    if (!s_uploadOk || !s_uploadFile) return;
+    s_uploadBytes += up.currentSize;
+    if (s_uploadBytes > 600UL * 1024UL) {
+      s_uploadOk = false;
+      s_uploadError = "GIF/JPEG exceeds the 600 KB device limit";
+      s_uploadFile.close();
+      return;
+    }
+    if (s_uploadFile.write(up.buf, up.currentSize) != up.currentSize) {
+      s_uploadOk = false;
+      s_uploadError = "Device storage is full";
+      s_uploadFile.close();
+    }
   } else if (up.status == UPLOAD_FILE_END) {
     if (s_uploadFile) s_uploadFile.close();
   } else if (up.status == UPLOAD_FILE_ABORTED) {
     if (s_uploadFile) s_uploadFile.close();
+    s_uploadOk = false;
+    s_uploadError = "Upload was cancelled";
   }
 }
 
@@ -483,8 +535,8 @@ void webPortalBegin(Settings& settings) {
   server.on("/api/import", HTTP_POST, handleImport);
   server.on("/api/checkupdate", HTTP_GET, handleCheckUpdate);
   server.on("/api/selfupdate", HTTP_POST, handleSelfUpdate);
-  server.on("/api/usage", HTTP_POST, handleUsagePush);      // legacy route
-  server.on("/api/ai-usage", HTTP_POST, handleUsagePush);   // preferred route
+  server.on("/api/codex", HTTP_POST, handleCodexPush);
+  server.on("/api/codex/status", HTTP_POST, handleCodexPush);
   server.on("/api/photos", HTTP_GET, handleGetPhotos);
   server.on("/api/photos/delete", HTTP_POST, handlePhotoDelete);
   server.on("/api/photos/upload", HTTP_POST, handlePhotoUploadDone, handlePhotoUpload);

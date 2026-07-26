@@ -1,8 +1,8 @@
 // Settings.h — persisted configuration (LittleFS /config.json)
 //
 // Layout is segmented per feature: shared device/network fields live at the top
-// level, and each feature owns a nested settings slice (ticker / usage / GitHub).
-// config.json mirrors this: { ..shared.., "ticker":{...}, "usage":{...}, ... }.
+// level, and each feature owns a nested settings slice (ticker, clock, gallery,
+// Codex and GitHub). config.json mirrors that structure.
 // The JSON reader also still accepts the old flat layout, so a device upgrading
 // from the pre-segmentation firmware keeps its WiFi + symbols; the next save
 // rewrites it nested.
@@ -56,16 +56,6 @@ struct TickerSettings {
   void fromJson(JsonObjectConst o);   // applies only the keys present
 };
 
-// ---- AI usage feature slice ------------------------------------------------
-struct UsageSettings {
-  String   usageUrl;      // trusted LAN bridge endpoint; legacy key retained
-  uint16_t pollSec;       // refresh period
-
-  void setDefaults();
-  void toJson(JsonObject o) const;
-  void fromJson(JsonObjectConst o);
-};
-
 // ---- GitHub Actions dashboard slice --------------------------------------
 // The device reads a compact JSON feed produced by the local emulator or a
 // trusted bridge. The bridge owns GitHub credentials; the ESP only receives a
@@ -91,6 +81,17 @@ struct GallerySettings {
   void fromJson(JsonObjectConst o);
 };
 
+// ---- Codex AI usage tracker slice ----------------------------------------
+struct CodexSettings {
+  String   statusUrl;     // e.g. "http://192.168.1.100:8000/codex-status.json"
+  uint16_t pollSec;       // default 30
+  uint16_t rotateSec;     // default 8
+
+  void setDefaults();
+  void toJson(JsonObject o) const;
+  void fromJson(JsonObjectConst o);
+};
+
 // ---- Clock / night mode / weather slice (device-wide) --------------------
 struct ClockSettings {
   String   tz;            // IANA display name, e.g. "Europe/Rome" (UI round-trip)
@@ -104,7 +105,7 @@ struct ClockSettings {
   bool     format24h;     // true: 24h format, false: 12h format
   bool     showSeconds;
   bool     showDate;
-  uint8_t  theme;         // 0 = Digital, 1 = Minimal/Simple Weather Clock, 2 = Analog
+  uint8_t  theme;         // 0 = giant clock, 1 = clock + current weather, 2 = 3-day forecast
   String   weatherCity;
   String   weatherApiKey;
   String   weatherUnits;  // "c" or "f"
@@ -116,7 +117,8 @@ struct ClockSettings {
   uint16_t accentColor;   // accent / secondary color
   uint16_t bgColor;       // background tint (0 = pure black)
 
-  // Font
+  // Legacy visual fields retained only to read older config backups. Firmware
+  // 0.8 uses fixed per-screen typography shared with the web preview.
   uint8_t  timeScale;     // 1..7 (1=small, 5=giant 30x40, 6=super giant 36x48, 7=screen fill 42x56)
   uint8_t  dateScale;     // 1..4
   uint8_t  fontStyle;     // 0=Sans, 1=Bold, 2=Digital Segment, 3=Modern Minimalist
@@ -143,11 +145,15 @@ struct Settings {
   String adminPass;     // empty => no auth required; default "1111"
 
   // --- Active feature ---
-  uint8_t mode;         // MODE_STOCKS / MODE_USAGE / MODE_CAROUSEL / MODE_GITHUB / MODE_CLOCK / MODE_GALLERY
+  uint8_t mode;         // one of MODE_STOCKS/CAROUSEL/GITHUB/CLOCK/GALLERY/CODEX
 
   // --- Carousel (mode == MODE_CAROUSEL): dwell + which features rotate ---
   uint16_t carouselSec;
-  bool carouselTicker, carouselUsage, carouselGithub, carouselClock, carouselGallery;
+  bool carouselTicker, carouselGithub, carouselClock, carouselGallery, carouselCodex;
+  // Current clock screens. The old fields below remain only for config migration.
+  bool carouselClockTime1, carouselClockTime2, carouselClockWeather2;
+  bool carouselClockTime3, carouselClockWeather1;
+  // Legacy aliases (read/mirrored for one release).
   bool carouselClockDigital, carouselClockWeather, carouselClockModern, carouselClockForecast;
 
   // --- Shared HTTP / display ---
@@ -159,10 +165,10 @@ struct Settings {
 
   // --- Feature slices ---
   TickerSettings  ticker;
-  UsageSettings   usage;
   GithubSettings  github;
   ClockSettings   clock;
   GallerySettings gallery;
+  CodexSettings   codex;
 
   void setDefaults();
 };

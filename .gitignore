@@ -47,7 +47,11 @@ dependencies.lock
 /emulator/config.local.json
 /emulator/device-config.local.json
 /emulator/github-events.local.json
+/emulator/photos/*
+!/emulator/photos/.gitkeep
 
-# Read-only snapshots from the physical stock device. These may contain
-# user-owned filenames or sanitized local state and must stay on this Mac.
-/research/stock-v9.0.51/raw/
+# Device exports and local audit output may contain credentials, filenames,
+# network identifiers, or other user-owned data.
+/backup-*.json
+/audit/
+/research/

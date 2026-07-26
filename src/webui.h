@@ -1,8 +1,9 @@
 // webui.h — single-page config UI served from PROGMEM
 //
 // Tabs are segmented per feature: shared Status/WiFi/Display/Update plus one tab
-// per feature (Ticker / AI Usage / GitHub). The config JSON
-// mirrors the nested Settings layout: { ..shared.., ticker:{...}, usage:{...} }.
+// per feature (Ticker / Clock & Weather / Gallery / Codex / GitHub). The config JSON
+// mirrors the nested Settings layout: { ..shared.., ticker:{...}, github:{...},
+// clock:{...}, gallery:{...}, codex:{...} }.
 #pragma once
 #include <Arduino.h>
 
@@ -81,8 +82,8 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
  <button data-t="clocktab">Clock &amp; Weather</button>
  <button data-t="gallerytab">Gallery</button>
  <button data-t="ticker">Ticker</button>
- <button data-t="usage">AI Usage</button>
  <button data-t="github">GitHub</button>
+ <button data-t="codex">Codex</button>
  <button data-t="update">Update</button>
 </nav>
 <main>
@@ -92,14 +93,15 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
   <div class="card"><h2>Tickers</h2><div id="tickBox" class="muted">-</div>
    <button class="btn sec" style="margin-top:10px" onclick="refreshNow()">Refresh data now</button></div>
   <div class="card"><h2>Documentation</h2>
-   <small class="hint">Complete references for <a href="https://github.com/bairachnyi/smalltv-ultra/blob/main/docs/src/content/docs/reference/settings.md" target="_blank">all settings</a>, <a href="https://github.com/bairachnyi/smalltv-ultra/blob/main/docs/src/content/docs/features/github.md" target="_blank">GitHub GH//STAT</a>, <a href="https://github.com/bairachnyi/smalltv-ultra/blob/main/docs/src/content/docs/reference/architecture.md" target="_blank">firmware architecture</a> and the <a href="https://github.com/bairachnyi/smalltv-ultra/blob/main/docs/src/content/docs/reference/http-api.md" target="_blank">HTTP API</a>.</small>
+   <small class="hint">Complete references for <a href="https://github.com/bairachnyi/geektv/blob/main/docs/src/content/docs/reference/settings.md" target="_blank">all settings</a>, <a href="https://github.com/bairachnyi/geektv/blob/main/docs/src/content/docs/features/github.md" target="_blank">GitHub GH//STAT</a>, <a href="https://github.com/bairachnyi/geektv/blob/main/docs/src/content/docs/reference/architecture.md" target="_blank">firmware architecture</a> and the <a href="https://github.com/bairachnyi/geektv/blob/main/docs/src/content/docs/reference/http-api.md" target="_blank">HTTP API</a>.</small>
   </div>
-  <div class="card"><h2>Factory V9.0.51 compatibility</h2>
+  <div class="card"><h2>SmallTV-Ultra screen coverage</h2>
    <div class="hint" style="line-height:1.55">
-    <p><b>Clock themes:</b> not yet ported to this candidate.</p>
-    <p><b>Weather and forecast:</b> not yet ported to this candidate.</p>
-    <p><b>Photo gallery:</b> not yet ported to this candidate.</p>
-    <p style="color:#ffb627"><b>Do not flash this candidate over the factory firmware yet.</b> These three factory features must be restored and tested first. The current local UI is an emulator, not a complete V9.0.51 replacement.</p>
+    <p><b>Clock:</b> two screens — giant time/date/IP and time with current weather.</p>
+    <p><b>Weather:</b> real today/tomorrow/day-after forecast with temperature and humidity.</p>
+    <p><b>Gallery:</b> cropped JPEG photos and animated GIF playback.</p>
+    <p><b>Operations:</b> GH//STAT and Codex quota/token pages.</p>
+    <p style="color:#ffb627"><b>Development firmware v0.8.3.</b> Keep a recovery image and confirm the correct board target before updating.</p>
    </div>
   </div>
  </section>
@@ -135,24 +137,22 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
    <label>What this device shows</label>
    <select id="mode" onchange="modeChanged()">
     <option value="stocks">Stock / crypto ticker</option>
-    <option value="usage">AI usage (Antigravity + Codex)</option>
     <option value="github">GitHub deploys</option>
-    <option value="clock">Clock: Giant Fullscreen</option>
-    <option value="clock_weather">Clock: Weather Station (Today)</option>
-    <option value="clock_modern">Clock: Modern Status Bar</option>
-    <option value="clock_forecast">Clock: 3-Day Forecast Station</option>
+    <option value="codex">Codex Quota Tracker</option>
+    <option value="clock">Clock 1 — Giant time + date + IP</option>
+    <option value="clock_time2">Clock 2 — Time + current weather</option>
+    <option value="clock_weather2">Weather — Today + next 2 days</option>
     <option value="gallery">Photo Gallery (240x240)</option>
     <option value="carousel">Carousel (rotate modes)</option>
    </select>
    <div id="carouselRow">
     <label>Switch mode every (s)</label><input id="carouselSec" type="number" min="5" max="3600">
     <div class="chk"><input id="carouselTicker" type="checkbox"><label>Ticker</label></div>
-    <div class="chk"><input id="carouselUsage" type="checkbox"><label>AI usage</label></div>
     <div class="chk"><input id="carouselGithub" type="checkbox"><label>GitHub deploys</label></div>
-    <div class="chk"><input id="carouselClockDigital" type="checkbox"><label>Clock: Giant Fullscreen</label></div>
-    <div class="chk"><input id="carouselClockWeather" type="checkbox"><label>Clock: Weather Station (Today)</label></div>
-    <div class="chk"><input id="carouselClockModern" type="checkbox"><label>Clock: Modern Status Bar</label></div>
-    <div class="chk"><input id="carouselClockForecast" type="checkbox"><label>Clock: 3-Day Forecast Station</label></div>
+    <div class="chk"><input id="carouselCodex" type="checkbox"><label>Codex Quota Tracker</label></div>
+    <div class="chk"><input id="carouselClockTime1" type="checkbox"><label>Clock 1 — Giant</label></div>
+    <div class="chk"><input id="carouselClockTime2" type="checkbox"><label>Clock 2 — Current weather</label></div>
+    <div class="chk"><input id="carouselClockWeather2" type="checkbox"><label>Weather — 3-day forecast</label></div>
     <div class="chk"><input id="carouselGallery" type="checkbox"><label>Photo Gallery</label></div>
    </div>
    <small class="hint">Pick the active feature, then configure it in its own tab. Carousel rotates through the ticked features.</small>
@@ -187,23 +187,13 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
      <div class="chk"><input id="format24h" type="checkbox"><label>24-hour time format (HH:MM)</label></div>
      <div class="chk"><input id="showSeconds" type="checkbox"><label>Show seconds (HH:MM:SS)</label></div>
      <div class="chk"><input id="showDate" type="checkbox"><label>Show day &amp; date</label></div>
-     <label>Clock Theme</label>
+     <label>Preview screen</label>
      <select id="clockTheme">
-      <option value="0">Giant Fullscreen Clock (Time Focus)</option>
-      <option value="1">Weather Station (Today Focus)</option>
-      <option value="2">Modern Status Bar (OLED Glass)</option>
-      <option value="3">3-Day Weather Forecast Breakdown</option>
+      <option value="0">Clock 1 — Giant time + date + IP</option>
+      <option value="1">Clock 2 — Time + current weather</option>
+      <option value="2">Weather — Today + next 2 days</option>
      </select>
-     <label>Font Size</label>
-     <select id="fontScale" onchange="pvRestart();updateClockPreview()">
-      <option value="0">Theme default</option>
-      <option value="1">Small</option>
-      <option value="2">Medium</option>
-      <option value="3">Large</option>
-      <option value="4">Extra Large</option>
-      <option value="5">Giant</option>
-     </select>
-     <div class="chk" style="margin-top:8px"><input id="boldText" type="checkbox" onchange="pvRestart();updateClockPreview()"><label>Bold text (thicker, smoother lines)</label></div>
+     <small class="hint">Typography and spacing are fixed per screen so the preview and the 240×240 device renderer stay aligned.</small>
     </div>
     <div class="card"><h2>Colors</h2>
      <div class="row">
@@ -225,8 +215,7 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
    <div class="card"><h2>Weather Forecast Settings</h2>
     <label>City Name</label>
     <input id="weatherCity" type="text" placeholder="Moscow, London, New York">
-    <label>OpenWeatherMap API Key <span class="muted">(Optional, blank uses wttr.in fallback)</span></label>
-    <input id="weatherApiKey" type="text" placeholder="e.g. 8a7f9... (32 char hex)">
+    <input id="weatherApiKey" type="hidden">
     <div class="row">
      <div>
       <label>Units</label>
@@ -240,7 +229,7 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
       <input id="weatherPollSec" type="number" min="60" max="86400" value="900">
      </div>
     </div>
-    <small class="hint">The device shows time, date, local weather, and its current <b>IP address</b> on the clock screen for easy access.</small>
+    <small class="hint">Weather and the real three-day forecast are read from wttr.in; no API key is required. Clock 2 shows location, current temperature, humidity, date and the device IP.</small>
    </div>
   </section>
 
@@ -255,13 +244,13 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
     </div>
    </div>
    <div class="card"><h2>Upload 240x240 Image / GIF</h2>
-    <label>Select image file <span class="muted">(JPG, PNG, GIF — opens 1:1 cropper)</span></label>
+    <label>Select image file <span class="muted">(JPG/JPEG or animated GIF — JPEG opens 1:1 cropper)</span></label>
     <input id="photoFile" type="file" accept="image/*,.raw" onchange="handlePhotoSelect(event)">
     <div style="margin-top:10px">
      <button id="photoUpBtn" class="btn" onclick="openCropModal()">Crop &amp; Upload (240x240)</button>
     </div>
     <div class="bar" style="margin-top:10px"><div id="photoBar"></div></div>
-    <small id="photoMsg" class="hint">Photos are automatically cropped 1:1, resized to 240x240 and compressed as JPEG (10-30 KB) for instant display on the device.</small>
+    <small id="photoMsg" class="hint">Photos are cropped 1:1, resized to 240×240 and compressed as JPEG. Animated GIFs are preserved and played on the device; use a canvas no larger than 240×240 and keep the file below 600 KB.</small>
    </div>
    <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
@@ -333,20 +322,6 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
   </div>
  </section>
 
- <!-- USAGE (feature) -->
- <section id="usage" class="tab">
-  <div class="card"><h2>AI usage</h2>
-   <label>AI Usage bridge URL</label>
-   <input id="usageUrl" type="url" placeholder="http://192.168.1.10:8788/api/ai-usage">
-   <label>Refresh data (s)</label><input id="usagePollSec" type="number" min="10" max="3600">
-   <small class="hint"><b>What it shows:</b> reported Antigravity and Codex usage percentages, plus reset timers. The device receives only compact percentages from a trusted bridge on your LAN; provider credentials stay on the Mac. <b>Pull:</b> enter the bridge endpoint. <b>Push:</b> leave it blank and POST the same JSON to <code>http://&lt;device&gt;/api/ai-usage</code>.</small>
-  </div>
-  <div class="card"><h2>Data availability</h2>
-   <small class="hint">Google does not currently publish a personal Antigravity allowance API, and OpenAI does not publish an API for personal ChatGPT/Codex plan usage. Their values therefore require a local adapter or manual bridge input. Official organization/admin usage APIs measure API or enterprise activity and are not the same as the personal app quota. No Google, OpenAI, Anthropic, or GitHub secret should be stored on this device.</small>
-   <small class="hint">Bridge JSON: <code>{"a":34,"ar":120,"c":57,"cr":360,"st":"ok","ok":true}</code>. Percentages are 0–100; reset values are minutes. The legacy Claude <code>s/sr/w/wr</code> contract remains accepted during migration.</small>
-  </div>
- </section>
-
  <!-- GITHUB (feature) -->
  <section id="github" class="tab">
   <div class="card"><h2>GitHub setup — quick guide</h2>
@@ -365,7 +340,7 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
     <p><b>R</b> counts running or queued events, <b>P</b> successful events, and <b>F</b> failed events. Each page contains up to two large cards. <b>FOCUS</b> means active builds/checks have priority and completed history is temporarily hidden.</p>
     <p>The animated ring and live <code>MM:SS</code> counter mean work is active or waiting. A static green check means success. A static red circle means failure.</p>
     <p>Each card shows: repository, workflow/environment/PR/release name, event type (<code>ACT</code>, <code>DEP</code>, <code>PR</code>, <code>REL</code>), branch or ref, and the last event date/time. Date/time uses the bridge computer's local timezone. A double cyan frame marks the newest event.</p>
-    <p><a href="https://github.com/bairachnyi/smalltv-ultra/blob/main/docs/src/content/docs/features/github.md" target="_blank">Open the complete GH//STAT documentation</a></p>
+    <p><a href="https://github.com/bairachnyi/geektv/blob/main/docs/src/content/docs/features/github.md" target="_blank">Open the complete GH//STAT documentation</a></p>
    </div>
   </div>
  <div class="card"><h2>GitHub deploy dashboard</h2>
@@ -401,7 +376,7 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
      <p>2. Enable webhooks, paste the permanent HTTPS URL and the exact secret generated above.</p>
      <p>3. Grant read-only repository permissions: <b>Actions</b>, <b>Checks</b>, <b>Contents</b>, <b>Deployments</b>, and <b>Pull requests</b>. No write permission is required.</p>
      <p>4. Subscribe to <code>workflow_run</code>, <code>deployment</code>, <code>deployment_status</code>, <code>pull_request</code>, <code>check_suite</code>, and <code>release</code>.</p>
-     <p>5. Install the app for <b>All repositories</b> on <code>bairachnyi</code> and <code>ananas-it</code>. New repositories will then be included automatically.</p>
+     <p>5. Install the app for <b>All repositories</b> on <code>octo-user</code> and <code>acme-labs</code>. New repositories will then be included automatically.</p>
     </div>
    </details>
    <label>Events to monitor</label>
@@ -412,9 +387,9 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
    <label>Owners and optional polling tokens</label>
    <table id="githubAccounts"></table>
    <button class="btn sec" style="margin-top:8px" onclick="addGithubAccount()">+ Add account</button>
-   <small class="hint"><b>Owner</b> filters accepted webhook repositories, for example <code>bairachnyi</code> or <code>ananas-it</code>. Webhook mode does not need PATs. A fine-grained <code>github_pat_…</code> token is only needed for legacy REST polling or future reconciliation.</small>
+   <small class="hint"><b>Owner</b> filters accepted webhook repositories, for example <code>octo-user</code> or <code>acme-labs</code>. Webhook mode does not need PATs. A fine-grained <code>github_pat_…</code> token is only needed for legacy REST polling or future reconciliation.</small>
    <label>Repository allowlist <span class="muted">(one owner/repo per line; blank = all configured owners)</span></label>
-   <textarea id="githubRepositories" placeholder="bairachnyi/smalltv-ultra"></textarea>
+   <textarea id="githubRepositories" placeholder="octo-user/demo-dashboard"></textarea>
    <small class="hint">In webhook mode leave this blank to accept every installed repository belonging to the owners above. Enter exact <code>owner/repository</code> names only when you want to restrict the screen.</small>
    <label>Bridge cache / GitHub refresh (s)</label><input id="githubCacheSec" type="number" min="60" max="3600" value="120">
    <small class="hint">Used only for REST polling. In webhook mode the device may read the bridge every 5–10 seconds without causing GitHub API requests.</small>
@@ -428,6 +403,37 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
   </div>
  </section>
 
+  <!-- CODEX TRACKER (feature) -->
+  <section id="codex" class="tab">
+   <div class="card"><h2>Codex Quota &amp; Usage Tracker</h2>
+    <p class="muted" style="line-height:1.5">Tracks your OpenAI Codex quota windows, token usage, and top models on the device display, compatible with <a href="https://github.com/lucasfogacadj/geekmagic-smalltv-ultra-codex" target="_blank" style="color:var(--acc2)">geekmagic-smalltv-ultra-codex</a>.</p>
+    <label>Codex Status JSON URL <span class="muted">(Optional LAN / Server Endpoint)</span></label>
+    <input id="codexStatusUrl" type="url" placeholder="http://192.168.1.100:8000/codex-status.json">
+    <small class="hint">URL serving your <code>codex-status.json</code> or Codex status API payload.</small>
+    <div class="row" style="margin-top:10px">
+     <div><label>Refresh poll interval (s)</label><input id="codexPollSec" type="number" min="5" max="3600" value="30"></div>
+     <div><label>Rotate screen pages (s)</label><input id="codexRotateSec" type="number" min="2" max="300" value="8"></div>
+    </div>
+   </div>
+   <div class="card"><h2>Push Endpoint API</h2>
+    <small class="hint" style="line-height:1.6">
+     You can also push JSON directly to the device without configuring a URL:<br>
+     <code>HTTP POST /api/codex</code><br>
+     Payload format:<br>
+     <code>{"ok":true, "primary_pct":81.0, "primary_reset":"14:42", "today_tokens":31700, "today_calls":14, "week_tokens":2160000}</code>
+    </small>
+   </div>
+   <div class="card"><h2>Current Status</h2>
+    <div id="codexState" class="hint" style="margin-bottom:10px">Waiting for data</div>
+    <div class="kv"><span>Primary Quota Available:</span><b id="codexPrimPct">--%</b></div>
+    <div class="kv"><span>Primary Reset Time:</span><b id="codexPrimRst">--</b></div>
+    <div class="kv"><span>5-Hour Quota Available:</span><b id="codexSecPct">--%</b></div>
+    <div class="kv"><span>Today Tokens Used:</span><b id="codexTodayTokens">--</b></div>
+    <div class="kv"><span>Today API Calls:</span><b id="codexTodayCalls">--</b></div>
+    <div class="kv"><span>7-Day Tokens:</span><b id="codexWeekTokens">--</b></div>
+   </div>
+  </section>
+
  <!-- UPDATE -->
  <section id="update" class="tab">
   <div class="card"><h2>Update from GitHub</h2>
@@ -437,14 +443,14 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
     <button class="btn" style="margin-left:8px" onclick="selfUpdate()" id="ghUpBtn" disabled>Update now</button>
    </div>
    <div id="ghMsg" class="muted" style="margin-top:8px"></div>
-   <small class="hint">Pulls the newest release straight from <a id="repoLink" href="https://github.com/bairachnyi/smalltv-ultra/releases" target="_blank">the GitHub repo</a>. HTTPS OTA is tight on the ESP8266; if it fails, use the manual upload below.</small>
+   <small class="hint">Pulls the newest release straight from <a id="repoLink" href="https://github.com/bairachnyi/geektv/releases" target="_blank">the GitHub repo</a>. HTTPS OTA is tight on the ESP8266; if it fails, use the manual upload below.</small>
   </div>
   <div class="card"><h2>Manual update (OTA)</h2>
    <input id="fw" type="file" accept=".bin">
    <div style="margin-top:12px"><button class="btn" onclick="upload()" id="upBtn">Upload &amp; flash</button></div>
    <div class="bar"><div id="upBar"></div></div>
    <div id="upMsg" class="muted" style="margin-top:8px"></div>
-   <small class="hint">Upload <code>smalltv-ultra-firmware.bin</code> from the <a href="https://github.com/bairachnyi/smalltv-ultra/releases" target="_blank">releases page</a> or a local build. The device reboots when done.</small>
+   <small class="hint">Upload <code>smalltv-ultra-firmware.bin</code> from the <a href="https://github.com/bairachnyi/geektv/releases" target="_blank">releases page</a> or a local build. The device reboots when done.</small>
   </div>
   <div class="card"><h2>Settings backup</h2>
    <button class="btn sec" onclick="location.href='/api/export'">Export settings</button>
@@ -461,7 +467,7 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
 
 <div style="text-align:center;padding:0 0 16px"><button class="btn" onclick="saveAll()">Save settings</button></div>
 <div style="text-align:center;padding:0 0 24px;font-size:12px">
- <a id="footRepo" href="https://github.com/bairachnyi/smalltv-ultra" target="_blank" style="color:var(--acc2);text-decoration:none">GitHub: bairachnyi/smalltv-ultra</a>
+ <a id="footRepo" href="https://github.com/bairachnyi/geektv" target="_blank" style="color:var(--acc2);text-decoration:none">GitHub: bairachnyi/geektv</a>
  <span id="footVer" class="muted"></span>
 </div>
 <div id="toast" class="toast"></div>
@@ -549,8 +555,8 @@ var TZMAP={
 function fillTz(){var s=$('tz');if(!s)return;var keys=Object.keys(TZMAP).filter(function(k){return k!==''});
  keys.sort();s.innerHTML='<option value="">UTC</option>'+keys.map(function(k){return '<option value="'+k+'">'+k+'</option>'}).join('');}
 
-var MODEOPT={ticker:'stocks',usage:'usage',github:'github'};
-var CAROPT={ticker:'carouselTicker',usage:'carouselUsage',github:'carouselGithub'};
+var MODEOPT={ticker:'stocks',github:'github'};
+var CAROPT={ticker:'carouselTicker',github:'carouselGithub'};
 function hideFeat(name){
  var b=document.querySelector('nav button[data-t="'+name+'"]'); if(b)b.remove();
  var sec=$(name); if(sec)sec.remove();
@@ -560,8 +566,8 @@ function hideFeat(name){
 function modeChanged(){if(!$('mode'))return;
  $('carouselRow').style.display=$('mode').value==='carousel'?'block':'none';}
 function loadConfig(){return j('/api/config').then(function(c){C=c;
- var f=c.features||{}; ['ticker','usage','github'].forEach(function(k){if(f[k]===false)hideFeat(k)});
- var t=c.ticker||{}, u=c.usage||{};
+ var f=c.features||{}; ['ticker','github'].forEach(function(k){if(f[k]===false)hideFeat(k)});
+ var t=c.ticker||{};
  // shared
   ['apSsid','apPass','hostname'].forEach(function(k){$(k).value=c[k]!=null?c[k]:''});
   if($('adminPass'))$('adminPass').placeholder=c.adminPass?'(set — blank keeps it)':'(none)';
@@ -591,38 +597,36 @@ function loadConfig(){return j('/api/config').then(function(c){C=c;
   sv('dateColor', formatHex(ck.dateColor, '#ffb6c1'));
   sv('accentColor', formatHex(ck.accentColor, '#58a9ff'));
   sv('bgColor', formatHex(ck.bgColor, '#000000'));
-  sv('fontScale', ck.fontScale || 0);
-  sc('boldText', !!ck.boldText);
   updateClockPreview();
   // gallery slice
  var gl=c.gallery||{}; sv('galleryRotateSec',gl.rotateSec||10); sc('galleryRandom',!!gl.randomOrder);
  loadPhotos();
  $('mode').value=c.mode||'stocks'; modeChanged();
   sv('carouselSec',c.carouselSec||30);
-  sc('carouselTicker',c.carouselTicker!==false); sc('carouselUsage',c.carouselUsage!==false);
+  sc('carouselTicker',c.carouselTicker!==false);
   sc('carouselGithub',c.carouselGithub!==false);
-  sc('carouselClockDigital',c.carouselClockDigital!==false);
-  sc('carouselClockWeather',!!c.carouselClockWeather);
-  sc('carouselClockModern',!!c.carouselClockModern);
-  sc('carouselClockForecast',!!c.carouselClockForecast);
+  sc('carouselClockTime1',c.carouselClockTime1!==false);
+  sc('carouselClockTime2',!!c.carouselClockTime2);
+  sc('carouselClockWeather2',!!c.carouselClockWeather2);
   sc('carouselGallery',c.carouselGallery!==false);
- // ticker slice
- T_TEXT.forEach(function(k){sv(k,t[k])});
- T_NUM.forEach(function(k){sv(k,t[k])});
- T_BOOL.forEach(function(k){sc(k,t[k])});
- sv('colorInverted',t.colorInverted?'true':'false');
- sv('changeOnRange',t.changeOnRange===false?'false':'true');
- renderSyms(t.symbols||[]); symHintFor('yahoo');
- // usage slice
- sv('usageUrl',u.usageUrl);
- sv('usagePollSec',u.pollSec);
- // GitHub slice
- var gh=c.github||{};
- sv('githubStatusUrl',gh.statusUrl); sv('githubPollSec',gh.pollSec||15); sv('githubRotateSec',gh.rotateSec||8);
- var gt=$('githubToken');if(gt)gt.placeholder=gh.tokenSet?'(saved — blank keeps it)':'optional';
- if(gh.statusUrl)loadGithubBridge(false);
- var ap=$('apPass'); if(ap)ap.placeholder=c.apPassSet?'(unchanged)':'(open)';
-})}
+  sc('carouselCodex',c.carouselCodex!==false);
+  // ticker slice
+  T_TEXT.forEach(function(k){sv(k,t[k])});
+  T_NUM.forEach(function(k){sv(k,t[k])});
+  T_BOOL.forEach(function(k){sc(k,t[k])});
+  sv('colorInverted',t.colorInverted?'true':'false');
+  sv('changeOnRange',t.changeOnRange===false?'false':'true');
+  renderSyms(t.symbols||[]); symHintFor('yahoo');
+  // GitHub slice
+  var gh=c.github||{};
+  sv('githubStatusUrl',gh.statusUrl); sv('githubPollSec',gh.pollSec||15); sv('githubRotateSec',gh.rotateSec||8);
+  var gt=$('githubToken');if(gt)gt.placeholder=gh.tokenSet?'(saved — blank keeps it)':'optional';
+  if(gh.statusUrl)loadGithubBridge(false);
+  // Codex slice
+  var cx=c.codex||{};
+  sv('codexStatusUrl',cx.statusUrl||''); sv('codexPollSec',cx.pollSec||30); sv('codexRotateSec',cx.rotateSec||8);
+  var ap=$('apPass'); if(ap)ap.placeholder=c.apPassSet?'(unchanged)':'(open)';
+ })}
 
 function esc(s){return (''+(s==null?'':s)).replace(/[<>&"']/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]})}
 
@@ -646,88 +650,78 @@ function updateClockPreview(){
  var dc=gv('dateColor')||'#ffb6c1';
  var ac=gv('accentColor')||'#58a9ff';
  var bg=gv('bgColor')||'#000000';
- var timeSz=parseInt(gv('timeScale'))||5;
- var dateSz=parseInt(gv('dateScale'))||2;
- var fontSt=gv('fontStyle')||'0';
- var isBold=gc('boldText')||(fontSt==='1');
  var showSec=gc('showSeconds');
  var showDt=gc('showDate');
- var city=(gv('weatherCity')||'MOSCOW').toUpperCase();
-
- if(showSec && timeSz > 5) timeSz = 5;
+ var city=(gv('weatherCity')||'LONDON').toUpperCase().slice(0,16);
 
  ctx.fillStyle=bg; ctx.fillRect(0,0,240,240);
-
  var fontFamily = 'Montserrat, system-ui, sans-serif';
- var fontWeight = '700 ';
+ var mono = 'ui-monospace, SFMono-Regular, Menlo, monospace';
 
- function drawText(txt,x,y,sz,color){
-  ctx.fillStyle=color;
-  ctx.font=fontWeight+(sz*8)+'px '+fontFamily;
-  ctx.textAlign='left';
-  ctx.fillText(txt,x,y+(sz*8));
-  if(isBold){ctx.fillText(txt,x+1,y+(sz*8));}
+ function drawRRect(x,y,w,h,r,fColor,sColor){
+  ctx.fillStyle=fColor; ctx.strokeStyle=sColor; ctx.lineWidth=1;
+  ctx.beginPath();
+  if(ctx.roundRect) ctx.roundRect(x,y,w,h,r);
+  else ctx.rect(x,y,w,h);
+  ctx.fill(); ctx.stroke();
  }
- function drawCentered(txt,y,sz,color){
+ function drawText(txt,x,y,px,color,family,weight){
   ctx.fillStyle=color;
-  ctx.font=fontWeight+(sz*8)+'px '+fontFamily;
+  ctx.font=(weight||'700')+' '+px+'px '+(family||mono);
+  ctx.textAlign='left';
+  ctx.textBaseline='top';
+  ctx.fillText(txt,x,y);
+ }
+ function drawCentered(txt,yCenter,px,color,family,weight){
+  ctx.fillStyle=color;
+  ctx.font=(weight||'700')+' '+px+'px '+(family||fontFamily);
   ctx.textAlign='center';
-  ctx.fillText(txt,120,y+(sz*8));
-  if(isBold){ctx.fillText(txt,121,y+(sz*8));}
+  ctx.textBaseline='middle';
+  ctx.fillText(txt,120,yCenter);
+ }
+ function weatherMark(cx,cy,label,color){
+  drawRRect(cx-20,cy-13,40,26,8,'#081018',color);
+  drawCentered(label,cy,8,color,mono,'700');
  }
 
  var timeStr=showSec?'12:34:56':'12:34';
- var dateStr='MON, 23 JUL 2026';
+ var dateStr='MON, 25 JUL 2026';
+ var ipStr='IP: 192.168.1.50';
 
  if(theme===0){
-  var yOff=(timeSz>=7)?36:(timeSz===6?44:(timeSz===5?52:62));
-  if (fontSt === '2') {
-   ctx.strokeStyle='rgba(24,198,198,0.3)';ctx.lineWidth=2;ctx.strokeRect(8,yOff-4,224,timeSz*8+8);
-  }
-  drawCentered(timeStr,yOff,timeSz,tc);
-  if(showDt) {
-   var dateY=(timeSz>=6)?168:142;
-   ctx.fillStyle='rgba(24,198,198,0.15)';ctx.fillRect(10,dateY,220,32);
-   ctx.strokeStyle=dc;ctx.lineWidth=1;ctx.strokeRect(10,dateY,220,32);
-   drawCentered(dateStr,dateY+4,dateSz,dc);
-  }
-  drawCentered('IP: 192.168.1.141',218,1,ac);
+  drawRRect(6,6,228,44,10,'#081421',dc);
+  if(showDt)drawCentered(dateStr,28,18,dc,fontFamily,'700');
+  drawRRect(6,56,228,120,12,'#081018',tc);
+  drawCentered(timeStr,116,showSec?38:54,tc,fontFamily,'700');
+  drawRRect(6,182,228,52,10,'#081421',ac);
+  drawCentered(ipStr,208,18,ac,fontFamily,'700');
  } else if(theme===1){
-  ctx.fillStyle='rgba(1,134,200,0.2)';ctx.fillRect(8,8,224,120);
-  ctx.strokeStyle='#1C17';ctx.strokeRect(8,8,224,120);
-  drawText(city,18,18,2,ac);
-  drawText('+22.5C',18,46,4,tc);
-  drawText('CLEAR SKY',18,94,2,dc);
-  ctx.fillStyle='rgba(8,201,150,0.2)';ctx.fillRect(8,134,224,98);
-  ctx.strokeStyle='#22F3';ctx.strokeRect(8,134,224,98);
-  drawCentered(timeStr,148,timeSz,tc);
-  if(showDt) drawCentered(dateStr,198,dateSz,dc);
- } else if(theme===2){
-  ctx.fillStyle='rgba(16,132,200,0.2)';ctx.fillRect(8,8,224,130);
-  ctx.strokeStyle=ac;ctx.strokeRect(8,8,224,130);
-  drawCentered(timeStr,35,timeSz,tc);
-  if(showDt) drawCentered(dateStr,98,dateSz,dc);
-  ctx.fillStyle='rgba(8,66,100,0.2)';ctx.fillRect(8,144,224,88);
-  ctx.strokeStyle='#2126';ctx.strokeRect(8,144,224,88);
-  drawText(city,18,160,2,dc);
-  drawText('+22.5C',135,155,3,ac);
-  drawText('LIVE WEATHER',18,198,1,ac);
+  drawRRect(6,6,228,78,10,'#081018',tc);
+  drawCentered(timeStr,43,showSec?34:46,tc,fontFamily,'700');
+  if(showDt)drawCentered(dateStr,70,8,dc,mono,'700');
+  drawRRect(6,90,228,104,10,'#081421',ac);
+  drawText(city,14,100,16,'#ffffff',mono,'700');
+  weatherMark(206,112,'SUN',ac);
+  drawText('29C',14,127,24,tc,mono,'700');
+  drawText('HUM 74%',122,132,8,dc,mono,'700');
+  drawText('PARTLY CLOUDY',14,163,8,'#848284',mono,'700');
+  drawRRect(6,200,228,34,9,'#000408','#212838');
+  drawCentered(ipStr,217,16,ac,mono,'700');
  } else {
-  ctx.fillStyle='rgba(9,68,120,0.2)';ctx.fillRect(6,6,228,72);
-  ctx.strokeStyle='#1390';ctx.strokeRect(6,6,228,72);
-  drawText('TODAY ('+city+')',16,16,2,tc);
-  drawText('+22.5C',135,12,3,ac);
-  drawText('CLEAR SKY',16,45,2,dc);
-  ctx.fillStyle='rgba(16,132,200,0.2)';ctx.fillRect(6,84,228,72);
-  ctx.strokeStyle='#2126';ctx.strokeRect(6,84,228,72);
-  drawText('TOMORROW',16,94,2,ac);
-  drawText('+24.0C',135,90,3,dc);
-  drawText('PARTLY CLOUDY',16,123,2,dc);
-  ctx.fillStyle='rgba(1,134,200,0.2)';ctx.fillRect(6,162,228,72);
-  ctx.strokeStyle='#1C17';ctx.strokeRect(6,162,228,72);
-  drawText('SAT 25 JUL',16,172,2,ac);
-  drawText('+20.5C',135,168,3,ac);
-  drawText('MOSTLY SUNNY',16,201,2,dc);
+  var days=[
+   ['TODAY','PARTLY CLOUDY','29C','27..31  H74%','SUN',tc],
+   ['TOMORROW','RAIN SHOWERS','28C','26..30  H81%','RAIN',dc],
+   ['28 JUL','CLOUDY','30C','27..32  H70%','CLOUD',ac]
+  ];
+  days.forEach(function(d,i){
+   var y=6+i*78;
+   drawRRect(6,y,228,72,8,i===1?'#101018':'#081421',d[5]);
+   drawText(d[0],14,y+10,16,d[5],mono,'700');
+   drawText(d[2],154,y+10,16,'#ffffff',mono,'700');
+   drawText(d[1],14,y+36,8,'#ffffff',mono,'700');
+   drawText(d[3],14,y+53,8,'#848284',mono,'700');
+   weatherMark(210,y+49,d[4],d[5]);
+  });
  }
 }
 function resetClockColors(){
@@ -735,12 +729,12 @@ function resetClockColors(){
  updateClockPreview();
 }
 
-// Listen for color/font/theme changes to update preview
+// Listen for color/theme changes to update preview.
 document.addEventListener('input',function(e){
- if(e.target.id&&['timeColor','dateColor','accentColor','bgColor','timeScale','dateScale'].indexOf(e.target.id)>=0) updateClockPreview();
+ if(e.target.id&&['timeColor','dateColor','accentColor','bgColor'].indexOf(e.target.id)>=0) updateClockPreview();
 });
 document.addEventListener('change',function(e){
- if(e.target.id&&['clockTheme','fontStyle','timeScale','dateScale','showSeconds','showDate','boldText'].indexOf(e.target.id)>=0) updateClockPreview();
+ if(e.target.id&&['clockTheme','showSeconds','showDate'].indexOf(e.target.id)>=0) updateClockPreview();
 });
 function symHintFor(v){var h=$('symHint');if(!h)return;
  h.innerHTML=(v==='cash'
@@ -782,9 +776,10 @@ function cashPick(k){var rows=document.querySelectorAll('#symTable tr');var tr=n
 function collect(){
  var o={mode:gv('mode'),
   carouselSec:parseInt(gv('carouselSec'))||30,
-  carouselTicker:gc('carouselTicker'), carouselUsage:gc('carouselUsage'), carouselGithub:gc('carouselGithub'),
-  carouselClockDigital:gc('carouselClockDigital'), carouselClockWeather:gc('carouselClockWeather'), carouselClockModern:gc('carouselClockModern'), carouselClockForecast:gc('carouselClockForecast'),
-  carouselClock:gc('carouselClockDigital')||gc('carouselClockWeather')||gc('carouselClockModern')||gc('carouselClockForecast'),
+  carouselTicker:gc('carouselTicker'), carouselGithub:gc('carouselGithub'), carouselCodex:gc('carouselCodex'),
+  carouselClockTime1:gc('carouselClockTime1'), carouselClockTime2:gc('carouselClockTime2'),
+  carouselClockWeather2:gc('carouselClockWeather2'),
+  carouselClock:gc('carouselClockTime1')||gc('carouselClockTime2')||gc('carouselClockWeather2'),
   carouselGallery:gc('carouselGallery'),
   brightness:parseInt(gv('brightness'))||0,
   rotation:parseInt(gv('rotation')),
@@ -807,8 +802,6 @@ function collect(){
   });
   o.ticker=t;
  }
- // usage slice
- if($('usage')) o.usage={usageUrl:gv('usageUrl'), pollSec:parseInt(gv('usagePollSec'))||0};
  // GitHub slice
  if($('github')) o.github={statusUrl:gv('githubStatusUrl'),accessToken:gv('githubToken'),
   pollSec:parseInt(gv('githubPollSec'))||15,rotateSec:parseInt(gv('githubRotateSec'))||8};
@@ -818,20 +811,19 @@ function collect(){
   nightEnabled:gc('nightEnabled'),nightStart:gv('nightStart')||'22:00',
   nightEnd:gv('nightEnd')||'07:00',nightLevel:parseInt(gv('nightLevel'))||0,
   format24h:gc('format24h'),showSeconds:gc('showSeconds'),showDate:gc('showDate'),
-  theme:parseInt(gv('clockTheme'))||0,weatherCity:gv('weatherCity'),weatherApiKey:gv('weatherApiKey'),
+  theme:parseInt(gv('clockTheme'))||0,weatherCity:gv('weatherCity'),
   weatherUnits:gv('weatherUnits')||'c',weatherPollSec:parseInt(gv('weatherPollSec'))||900,
   timeColor:gv('timeColor')||'#39e7ff',
   dateColor:gv('dateColor')||'#ffb6c1',
   accentColor:gv('accentColor')||'#58a9ff',
-  bgColor:gv('bgColor')||'#000000',
-  timeScale:parseInt(gv('timeScale'))||5,
-  dateScale:parseInt(gv('dateScale'))||2,
-  fontStyle:parseInt(gv('fontStyle'))||0,
-  fontScale:parseInt(gv('timeScale'))||5,
-  boldText:gc('boldText')};}
+  bgColor:gv('bgColor')||'#000000'};}
  // gallery slice
  if($('galleryRotateSec')){
   o.gallery={rotateSec:parseInt(gv('galleryRotateSec'))||10,randomOrder:gc('galleryRandom')};
+ }
+ // codex slice
+ if($('codexStatusUrl')){
+  o.codex={statusUrl:gv('codexStatusUrl'),pollSec:parseInt(gv('codexPollSec'))||30,rotateSec:parseInt(gv('codexRotateSec'))||8};
  }
  return o;
 }
@@ -919,7 +911,7 @@ function validateGithubFeed(required){clearGithubProblems();var raw=gv('githubSt
 function validateGithubBridge(){if(!validateGithubFeed(true))return false;var rows=document.querySelectorAll('#githubAccounts .ghacct'),seen={};
  if(!rows.length)return githubProblem('Add at least one GitHub account owner.','githubAccounts');
  for(var i=0;i<rows.length;i++){var owner=rows[i].querySelector('.ghowner'),token=rows[i].querySelector('.ghtoken'),name=owner.value.trim();
-  if(!/^[A-Za-z0-9_.-]+$/.test(name)){owner.style.borderColor='var(--red)';owner.focus();return githubProblem('Account row '+(i+1)+': enter only the GitHub owner login, for example ananas-it.',null)}
+  if(!/^[A-Za-z0-9_.-]+$/.test(name)){owner.style.borderColor='var(--red)';owner.focus();return githubProblem('Account row '+(i+1)+': enter only the GitHub owner login, for example acme-labs.',null)}
   if(seen[name.toLowerCase()]){owner.style.borderColor='var(--red)';return githubProblem('Account '+name+' is listed more than once.',null)}seen[name.toLowerCase()]=1;
   if(token.value.trim()&&!/^github_pat_/.test(token.value.trim())){token.style.borderColor='var(--red)';token.focus();return githubProblem('Token for '+name+' must be a fine-grained token beginning with github_pat_.',null)}}
  var repos=gv('githubRepositories').split(/[,\n]/).map(function(x){return x.trim()}).filter(Boolean);if(repos.length>50)return githubProblem('Use no more than 50 repositories.','githubRepositories');
@@ -1013,6 +1005,17 @@ function loadStatus(){j('/api/status').then(function(s){
  // Update tab was closed. Don't clobber an in-progress check/update message.
  if(!window._otaShown){window._otaShown=1;var gm=$('ghMsg');if(gm&&!gm.textContent&&s.updateMsg&&s.updateMsg!=='updating...')gm.textContent='Last update: '+s.updateMsg}
  var fv=$('footVer'); if(fv)fv.textContent=' v'+s.version;
+ var cx=s.codex||{}, setCx=function(id,value){var e=$(id);if(e)e.textContent=value};
+ setCx('codexPrimPct',cx.valid?Math.round(cx.primaryPct)+'%':'--%');
+ setCx('codexPrimRst',cx.valid?(cx.primaryReset||'--'):'--');
+ setCx('codexSecPct',cx.valid?Math.round(cx.secondaryPct)+'%':'--%');
+ setCx('codexTodayTokens',cx.valid?Number(cx.todayTokens||0).toLocaleString():'--');
+ setCx('codexTodayCalls',cx.valid?Number(cx.todayCalls||0).toLocaleString():'--');
+ setCx('codexWeekTokens',cx.valid?Number(cx.weekTokens||0).toLocaleString():'--');
+ var cxState=$('codexState');if(cxState){
+  cxState.textContent=cx.error?((cx.errorCode||'SYNC ERROR')+': '+(cx.errorMessage||'Codex data unavailable')):(cx.valid?(cx.fresh?'Live data':'Data is stale'):'Waiting for data');
+  cxState.style.color=cx.error||!cx.fresh?'var(--red)':'var(--acc)';
+ }
  if(s.repo){var rl=$('repoLink'); if(rl)rl.href=s.repo+'/releases'; var fr=$('footRepo'); if(fr)fr.href=s.repo;}
  $('statusBox').innerHTML=
   kv('Firmware',s.fw+' '+s.version)+kv('Mode',s.mode.toUpperCase())+

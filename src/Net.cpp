@@ -99,15 +99,6 @@ void netBegin(const Settings& s, void (*onProgress)(const char*)) {
       g_mode = NET_STA;
       if (MDNS.begin(g_hostname.c_str())) {
         MDNS.addService("http", "tcp", 80);
-#if WITH_USAGE
-        // Discoverable AI-usage push service so a trusted bridge can find and
-        // push to every SmallTV on the LAN. TXT carries the
-        // device id, firmware version, and the push path.
-        MDNS.addService("ai-usage", "tcp", 80);
-        MDNS.addServiceTxt("ai-usage", "tcp", "id",   g_hostname.c_str());
-        MDNS.addServiceTxt("ai-usage", "tcp", "ver",  FW_VERSION);
-        MDNS.addServiceTxt("ai-usage", "tcp", "path", "/api/ai-usage");
-#endif
       }
       if (onProgress) onProgress(WiFi.localIP().toString().c_str());
       return;

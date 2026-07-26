@@ -1,10 +1,12 @@
 // smalltv-ultra — custom firmware for the GeekMagic SmallTV family
 //
-// Three features, each a self-contained DisplayMode (see Mode.h), picked in the
-// web UI and dispatched from the registry below:
+// Self-contained display modes (see Mode.h), picked in the web UI and
+// dispatched from the registry below:
 //   - Ticker (features/ticker):  stock/crypto price, % change, sparkline.
-//   - Usage  (features/usage):   Antigravity + Codex usage bars.
 //   - GitHub (features/github):  GH//STAT CI/CD dashboard via a trusted bridge.
+//   - Clock  (features/clock):   two clock screens plus a real 3-day forecast.
+//   - Gallery(features/gallery): JPEG and animated GIF album.
+//   - Codex  (features/codex):   quota and token usage.
 // Shared plumbing (WiFi, web UI, OTA, display core, settings) lives at src root.
 //
 // License: WTFPL
@@ -22,9 +24,6 @@
 #if WITH_TICKER
 #include "TickerMode.h"
 #endif
-#if WITH_USAGE
-#include "UsageMode.h"
-#endif
 #if WITH_GITHUB
 #include "GithubMode.h"
 #include "GithubClient.h"
@@ -35,6 +34,8 @@
 #if WITH_GALLERY
 #include "GalleryMode.h"
 #endif
+#include "features/codex/CodexMode.h"
+#include "features/codex/CodexClient.h"
 
 // ---- mode registry --------------------------------------------------------
 // The compiled-in features, in display order. main.cpp holds no per-feature
@@ -42,9 +43,6 @@
 static DisplayMode* kModes[] = {
 #if WITH_TICKER
   &g_tickerMode,
-#endif
-#if WITH_USAGE
-  &g_usageMode,
 #endif
 #if WITH_GITHUB
   &g_githubMode,
@@ -55,6 +53,7 @@ static DisplayMode* kModes[] = {
 #if WITH_GALLERY
   &g_galleryMode,
 #endif
+  &g_codexMode,
 };
 static const size_t kModeCount = sizeof(kModes) / sizeof(kModes[0]);
 
@@ -72,9 +71,11 @@ static uint8_t  g_carClockThemeIdx = 0;
 static bool carouselHas(const Settings& s, const DisplayMode* m) {
   switch (m->modeConst()) {
     case MODE_STOCKS:  return s.carouselTicker;
-    case MODE_USAGE:   return s.carouselUsage;
     case MODE_GITHUB:  return s.carouselGithub;
-    case MODE_CLOCK:   return s.carouselClock || s.carouselClockDigital || s.carouselClockWeather || s.carouselClockModern || s.carouselClockForecast;
+    case MODE_CODEX:   return s.carouselCodex;
+    case MODE_CLOCK:   return s.carouselClock || s.carouselClockTime1 || s.carouselClockTime2 || s.carouselClockWeather2 ||
+                              s.carouselClockTime3 || s.carouselClockWeather1 || s.carouselClockDigital ||
+                              s.carouselClockWeather || s.carouselClockModern || s.carouselClockForecast;
     case MODE_GALLERY: return s.carouselGallery;
     default:           return true;
   }
@@ -82,20 +83,21 @@ static bool carouselHas(const Settings& s, const DisplayMode* m) {
 
 // Count how many carousel clock themes are enabled.
 static uint8_t carouselClockCount(const Settings& s) {
-  return (uint8_t)(s.carouselClockDigital ? 1 : 0)
-       + (uint8_t)(s.carouselClockWeather ? 1 : 0)
-       + (uint8_t)(s.carouselClockModern  ? 1 : 0)
-       + (uint8_t)(s.carouselClockForecast? 1 : 0);
+  return (uint8_t)((s.carouselClockTime1 || s.carouselClockDigital) ? 1 : 0)
+       + (uint8_t)((s.carouselClockTime2 || s.carouselClockTime3 || s.carouselClockWeather1 ||
+                    s.carouselClockWeather || s.carouselClockModern) ? 1 : 0)
+       + (uint8_t)((s.carouselClockWeather2 || s.carouselClockForecast) ? 1 : 0);
 }
 
-// Return the Nth enabled carousel clock theme index (0=Fullscreen, 1=Weather, 2=Modern, 3=Forecast).
+// Return the Nth enabled clock screen (0=giant clock, 1=clock + weather,
+// 2=three-day forecast). Legacy switches map to their closest current screen.
 static uint8_t carouselClockThemeAt(const Settings& s, uint8_t n) {
   uint8_t cur = 0;
-  if (s.carouselClockDigital)  { if (n == cur) return 0; cur++; }
-  if (s.carouselClockWeather)  { if (n == cur) return 1; cur++; }
-  if (s.carouselClockModern)   { if (n == cur) return 2; cur++; }
-  if (s.carouselClockForecast) { if (n == cur) return 3; cur++; }
-  return 0;  // fallback: fullscreen clock
+  if (s.carouselClockTime1 || s.carouselClockDigital)  { if (n == cur) return 0; cur++; }
+  if (s.carouselClockTime2 || s.carouselClockTime3 || s.carouselClockWeather1 ||
+      s.carouselClockWeather || s.carouselClockModern) { if (n == cur) return 1; cur++; }
+  if (s.carouselClockWeather2 || s.carouselClockForecast) { if (n == cur) return 2; cur++; }
+  return 0;  // fallback: Time 1
 }
 
 // Advance g_carIdx to the next ticked mode (stays put if none other is ticked).

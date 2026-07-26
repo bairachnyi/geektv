@@ -103,6 +103,7 @@ const DEVICE_PREVIEW_CSS = String.raw`
 .pv-gh-stats{display:flex;gap:5px;margin:7px 0}.pv-gh-stats span{flex:1;padding:5px;border-radius:5px;background:#0b1212;text-align:center;font-size:10px}.pv-event{display:grid;grid-template-columns:30px 1fr auto;gap:7px;align-items:center;min-height:73px;padding:8px 5px;border:1px solid #17362e;border-left:3px solid currentColor;border-radius:7px;margin-top:6px}.pv-event.latest{border-color:#39e7ff;box-shadow:inset 0 0 0 1px #39e7ff55}.pv-icon{display:grid;place-items:center;width:25px;height:25px;border-radius:50%;border:3px solid currentColor;font-weight:900;font-size:13px}.pv-icon.run{border-top-color:transparent;animation:pvSpin 1s linear infinite}.pv-event b{display:block;max-width:130px;overflow:hidden;white-space:nowrap;font-size:13px}.pv-event b.pv-marquee span{display:inline-block;animation:pvTextLoop 8s linear infinite}.pv-event small{display:block;max-width:130px;overflow:hidden;white-space:nowrap;color:#91a49e;font-size:10px;margin-top:5px}.pv-event time{font-size:10px;color:#a2b3ad}
 @keyframes pvTextLoop{0%,15%{transform:translateX(0)}100%{transform:translateX(-52%)}}
 @keyframes pvSpin{to{transform:rotate(360deg)}}.pv-caption{margin:9px 1px 8px;font:11px/1.45 system-ui;color:#8999a6}.pv-controls button{width:34px;height:30px;border:1px solid #30404d;border-radius:8px;background:#151c23;color:#d9e6ee;cursor:pointer}.pv-controls button:hover{border-color:#52d8aa}.pv-mode{flex:1;text-align:center;font-size:10px;color:#a9bbc5}.pv-foot{margin-top:9px;font-size:9px;color:#657783}.pv-progress{height:2px;flex:1;background:#182229;overflow:hidden}.pv-progress i{display:block;height:100%;width:0;background:#51e4aa}.pv-progress i.go{animation:pvProgress 4s linear infinite}@keyframes pvProgress{from{width:0}to{width:100%}}
+.pv-codex-page{position:absolute;inset:0;padding:6px;box-sizing:border-box;background:#000;opacity:0;animation:pvCodexPages 12s infinite}.pv-codex-page:nth-child(2){animation-delay:4s}.pv-codex-page:nth-child(3){animation-delay:8s}@keyframes pvCodexPages{0%,30%{opacity:1}33%,100%{opacity:0}}
 .pv-local-badge{position:fixed;right:12px;bottom:12px;background:#2f81f7;color:white;padding:7px 10px;border-radius:8px;font:12px system-ui;z-index:20}
 @media(max-width:1100px){.pv-lab{position:relative;right:auto;top:auto;width:min(100% - 32px,680px);margin:16px auto}.pv-panel{display:grid;grid-template-columns:300px 1fr;gap:14px}.pv-head{grid-column:1/-1}.pv-caption,.pv-controls,.pv-foot{grid-column:2}.pv-controls{align-self:end}.pv-foot{align-self:start}.pv-local-badge{display:none}}
 @media(max-width:620px){.pv-panel{display:block}.pv-caption{margin-top:12px}.pv-lab{width:calc(100% - 20px)}}
@@ -122,7 +123,7 @@ const DEVICE_PREVIEW_HTML = String.raw`
 const DEVICE_PREVIEW_JS = String.raw`
 <script id="local-device-preview-js">
  (function(){
-  var pvNames={stocks:'TICKER',usage:'AI USAGE',github:'GH//STAT',clock:'CLOCK FULLSCREEN',clock_weather:'WEATHER STATION',clock_modern:'MODERN CLOCK',clock_forecast:'3-DAY FORECAST',gallery:'GALLERY'};
+  var pvNames={stocks:'TICKER',codex:'CODEX TRACKER',github:'GH//STAT',clock:'CLOCK 1',clock_time2:'CLOCK 2',clock_weather2:'WEATHER',gallery:'GALLERY'};
   var pvIndex=0,pvTimer=null,pvSyncTimer=null,pvRunId=0,pvPaused=false,pvBaseline='',pvReady=false;
   function pvEl(id){return document.getElementById(id)}
   function pvVal(id,def){var e=pvEl(id);return e?e.value:def}
@@ -132,12 +133,11 @@ const DEVICE_PREVIEW_JS = String.raw`
    if(mode!=='carousel')return [mode];
    var out=[];
    if(pvChecked('carouselTicker'))out.push('stocks');
-   if(pvChecked('carouselUsage'))out.push('usage');
    if(pvChecked('carouselGithub'))out.push('github');
-   if(pvChecked('carouselClockDigital'))out.push('clock');
-   if(pvChecked('carouselClockWeather'))out.push('clock_weather');
-   if(pvChecked('carouselClockModern'))out.push('clock_modern');
-   if(pvChecked('carouselClockForecast'))out.push('clock_forecast');
+   if(pvChecked('carouselCodex'))out.push('codex');
+   if(pvChecked('carouselClockTime1'))out.push('clock');
+   if(pvChecked('carouselClockTime2'))out.push('clock_time2');
+   if(pvChecked('carouselClockWeather2'))out.push('clock_weather2');
    if(pvChecked('carouselGallery'))out.push('gallery');
    return out.length?out:['github'];
   }
@@ -147,67 +147,48 @@ const DEVICE_PREVIEW_JS = String.raw`
     '<svg class="pv-chart" viewBox="0 0 220 93" aria-hidden="true"><defs><linearGradient id="pvgrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#39e7ff" stop-opacity=".24"/><stop offset="1" stop-color="#39e7ff" stop-opacity="0"/></linearGradient></defs><path class="pv-grid" d="M0 23H220M0 46H220M0 69H220"/><path class="area" d="M0 76L19 69L40 73L58 49L76 58L98 38L116 43L138 19L156 31L179 17L199 25L220 9V93H0Z"/><path d="M0 76L19 69L40 73L58 49L76 58L98 38L116 43L138 19L156 31L179 17L199 25L220 9"/></svg>'+
     '<div class="pv-dots"><b>●</b> ● ●</div></div>';
   }
-  function pvScreenUsage(){
-   return '<div class="pv-frame"><div class="pv-top"><b>AI<span class="pv-blue">//</span>STAT</b><span>LOCAL BRIDGE</span><span class="pv-time">LIVE</span></div>'+
-    '<div class="pv-ai-summary"><span>PROVIDERS <b>2</b></span><span>SYNC <b>NOW</b></span></div>'+
-    '<div class="pv-meter" style="--meter:#39e7ff;--fill:34%"><strong>ANTIGRAVITY</strong><span class="pv-percent">34%</span><small>Gemini / Claude · reset 02:00</small><div class="pv-meter-track"><i></i></div></div>'+
-    '<div class="pv-meter" style="--meter:#59ef9a;--fill:57%"><strong>CODEX</strong><span class="pv-percent">57%</span><small>Tokens / credits · reset 06:00</small><div class="pv-meter-track"><i></i></div></div></div>';
+  function pvScreenCodex(){
+   return '<div class="pv-frame" style="position:relative;background:#000;font-family:ui-monospace,monospace">'+
+    '<div class="pv-codex-page"><div style="height:228px;border:1px solid #18ff00;border-radius:12px;background:#081018;text-align:center;padding:10px;box-sizing:border-box"><b style="font-size:16px;color:#18ff00">CODEX QUOTA</b><div style="font-size:8px;color:#848284;margin-top:8px">PLUS PLAN</div><div style="font:700 56px Montserrat,sans-serif;color:#20c000;margin-top:16px">81%</div><div style="font-size:8px;color:#fff">REMAINING</div><div style="height:14px;background:#212021;border-radius:7px;margin:12px 4px 0;overflow:hidden"><i style="display:block;width:81%;height:100%;background:#20c000"></i></div><div style="font-size:8px;color:#ffe000;margin-top:8px">Resets: 14:42</div><div style="font-size:8px;color:#848284;margin-top:18px">5h Quota: 95% avail</div></div></div>'+
+    '<div class="pv-codex-page"><div style="height:228px;border:1px solid #20c000;border-radius:12px;background:#101018;text-align:center;padding:10px;box-sizing:border-box"><b style="font-size:16px;color:#20c000">TODAY CODEX</b><div style="font:700 52px Montserrat,sans-serif;color:#fff;margin-top:28px">31.7K</div><div style="font-size:8px;color:#848284">TOKENS USED</div><div style="font-size:16px;color:#ffe000;margin-top:14px">14 API Calls Today</div><div style="font-size:8px;color:#848284;margin-top:18px">Breakdown (In/Out/Cache):</div><div style="font-size:8px;color:#18ffff;margin-top:10px">In:20K Out:8K Cch:3.7K</div></div></div>'+
+    '<div class="pv-codex-page"><div style="height:228px;border:1px solid #f800f8;border-radius:12px;background:#000084;padding:10px;box-sizing:border-box"><div style="font-size:16px;color:#f800f8;text-align:center;font-weight:800">7-DAY &amp; MODELS</div><div style="font:700 40px Montserrat,sans-serif;color:#fff;text-align:center;margin-top:22px">2.16M</div><div style="font-size:8px;color:#848284;text-align:center">7-Day Rolling Tokens</div><hr style="border:0;border-top:1px solid #313431;margin:16px 4px 10px"><div style="font-size:8px;color:#18ffff">TOP MODELS</div><div style="font-size:8px;color:#fff;margin-top:14px">gpt-5.6-codex <span style="float:right;color:#20c000">1.84M</span></div><div style="font-size:8px;color:#fff;margin-top:20px">gpt-5.5-codex <span style="float:right;color:#20c000">320K</span></div><div style="font-size:8px;color:#848284;text-align:center;margin-top:24px">GeekTV Codex Tracker</div></div></div>'+
+   '</div>';
   }
   function pvScreenClock(theme){
    var cityEl = document.getElementById('weatherCity');
-   var city = (cityEl && cityEl.value && cityEl.value.trim()) ? cityEl.value.trim().toUpperCase() : 'HUA HIN';
+   var city = (cityEl && cityEl.value && cityEl.value.trim()) ? cityEl.value.trim().toUpperCase() : 'LONDON';
+   var tc=(document.getElementById('timeColor')||{}).value||'#39e7ff';
+   var dc=(document.getElementById('dateColor')||{}).value||'#ffb6c1';
+   var ac=(document.getElementById('accentColor')||{}).value||'#58a9ff';
+   if(theme===0){
+    return '<div class="pv-frame" style="background:#000;padding:6px;display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box">'+
+     '<div style="background:#081421;border:1px solid '+dc+';border-radius:10px;height:44px;display:flex;align-items:center;justify-content:center">'+
+      '<b style="font-family:Montserrat,sans-serif;font-size:18px;color:'+dc+'">MON, 25 JUL 2026</b>'+
+     '</div>'+
+     '<div style="background:#081018;border:1px solid '+tc+';border-radius:12px;height:120px;display:flex;align-items:center;justify-content:center">'+
+      '<b style="font-family:Montserrat,sans-serif;font-size:54px;color:'+tc+';line-height:1">14:35</b>'+
+     '</div>'+
+     '<div style="background:#081421;border:1px solid '+ac+';border-radius:10px;height:52px;display:flex;align-items:center;justify-content:center">'+
+      '<b style="font-family:Montserrat,sans-serif;font-size:18px;color:'+ac+'">IP: 192.168.1.50</b>'+
+     '</div>'+
+    '</div>';
+   }
    if(theme===1){
-    // Theme 1: Weather & Clock Station (Today Focus, no header title bar, large fonts)
-    return '<div class="pv-frame" style="background:#040d1a;padding:8px;display:flex;flex-direction:column;justify-content:space-between">'+
-     '<div style="background:#091b30;border:1px solid #1c3b5e;border-radius:12px;padding:12px 14px">'+
-      '<div style="display:flex;justify-content:space-between;align-items:center">'+
-       '<b style="font-size:18px;color:#70c5ff;letter-spacing:.05em">'+city+'</b>'+
-       '<b style="font-size:32px;color:#ff9f43;letter-spacing:-.03em">⛅ +31°C</b>'+
-      '</div>'+
-      '<div style="font-size:14px;font-weight:800;letter-spacing:.1em;color:#fff;margin-top:6px">TROPICAL CLEAR</div>'+
+    return '<div class="pv-frame" style="background:#000;padding:6px;box-sizing:border-box;font-family:ui-monospace,monospace">'+
+     '<div style="background:#081018;border:1px solid '+tc+';border-radius:10px;height:78px;display:flex;flex-direction:column;align-items:center;justify-content:center">'+
+      '<b style="font-family:Montserrat,sans-serif;font-size:46px;color:'+tc+';line-height:1">14:35</b>'+
+      '<b style="font-size:8px;color:'+dc+';margin-top:4px">MON, 25 JUL 2026</b>'+
      '</div>'+
-     '<div style="background:#091b30;border:1px solid #1c3b5e;border-radius:12px;padding:12px 14px;text-align:center">'+
-      '<div style="font-size:46px;font-weight:900;color:#fff;letter-spacing:-.04em;line-height:1">14:55</div>'+
-      '<div style="font-size:14px;font-weight:700;color:#70c5ff;margin-top:6px;letter-spacing:.08em">THU · 23 JUL 2026</div>'+
+     '<div style="background:#081421;border:1px solid '+ac+';border-radius:10px;height:104px;margin-top:6px;padding:9px 8px;box-sizing:border-box;position:relative">'+
+      '<b style="font-size:16px;color:#fff">'+city.slice(0,16)+'</b><span style="position:absolute;right:8px;top:8px;border:1px solid '+ac+';border-radius:8px;padding:7px 8px;font-size:8px;color:'+ac+'">SUN</span>'+
+      '<div style="font-size:24px;font-weight:800;color:'+tc+';margin-top:10px">29C <span style="font-size:8px;color:'+dc+';margin-left:20px">HUM 74%</span></div>'+
+      '<div style="font-size:8px;color:#848284;margin-top:5px">PARTLY CLOUDY</div>'+
      '</div>'+
+     '<div style="background:#000408;border:1px solid #212838;border-radius:9px;height:34px;margin-top:6px;display:flex;align-items:center;justify-content:center;color:'+ac+';font-size:16px;font-weight:800">IP: 192.168.1.50</div>'+
     '</div>';
    }
-   if(theme===2){
-    // Theme 2: Modern OLED Dashboard Clock (no header title bar, large fonts)
-    return '<div class="pv-frame" style="background:#000;padding:8px;display:flex;flex-direction:column;justify-content:space-between">'+
-     '<div style="background:rgba(20,12,32,0.9);border:1px solid #a55eea;border-radius:14px;padding:16px 8px;text-align:center;box-shadow:0 0 20px rgba(165,94,234,0.2)">'+
-      '<div style="font-size:62px;font-weight:900;letter-spacing:-.05em;color:#fff;line-height:1">14:55</div>'+
-      '<div style="font-size:13px;letter-spacing:.15em;color:#a55eea;margin-top:8px;font-weight:800">THURSDAY 23 JUL</div>'+
-     '</div>'+
-     '<div style="background:#0b0712;border:1px solid #221338;border-radius:10px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center">'+
-      '<b style="font-size:16px;color:#fff">📍 '+city+'</b>'+
-      '<b style="color:#a55eea;font-size:22px">+31°C ☀️</b>'+
-     '</div>'+
-    '</div>';
-   }
-   if(theme===3){
-    // Theme 3: 3-Day Forecast Breakdown (full 240x240 screen height, no header title bar)
-    return '<div class="pv-frame" style="background:#050914;padding:6px;display:flex;flex-direction:column;gap:6px;justify-content:space-between">'+
-     '<div style="background:#091624;border:1px solid #163654;border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;flex:1">'+
-      '<div><b style="font-size:14px;color:#39e7ff;display:block">TODAY · '+city+'</b><span style="font-size:13px;color:#fff;font-weight:700">SUNNY / CLEAR</span></div>'+
-      '<b style="font-size:24px;color:#4ee69c">+31°C</b>'+
-     '</div>'+
-     '<div style="background:#140c20;border:1px solid #2a1b40;border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;flex:1">'+
-      '<div><b style="font-size:14px;color:#a55eea;display:block">TOMORROW</b><span style="font-size:13px;color:#fff;font-weight:700">PARTLY CLOUDY</span></div>'+
-      '<b style="font-size:24px;color:#ffb627">+33°C</b>'+
-     '</div>'+
-     '<div style="background:#051424;border:1px solid #142d4c;border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;flex:1">'+
-      '<div><b style="font-size:14px;color:#70c5ff;display:block">SAT 25 JUL</b><span style="font-size:13px;color:#fff;font-weight:700">MOSTLY SUNNY</span></div>'+
-      '<b style="font-size:24px;color:#70c5ff">+30°C</b>'+
-     '</div>'+
-    '</div>';
-   }
-   // Theme 0: Giant Fullscreen Clock (No headers, maximum font size)
-   return '<div class="pv-frame" style="background:#02050a;padding:8px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center">'+
-    '<div style="font-size:74px;font-weight:900;letter-spacing:-.06em;color:#39e7ff;line-height:1;text-shadow:0 0 25px rgba(57,231,255,0.6)">14:55</div>'+
-    '<div style="font-size:14px;font-weight:800;letter-spacing:.15em;color:#ffb627;margin-top:16px;background:rgba(255,182,39,0.12);padding:6px 16px;border-radius:14px;border:1px solid rgba(255,182,39,0.3)">THURSDAY · 23 JUL 2026</div>'+
-    '<div style="font-size:11px;color:#5a84a2;margin-top:14px">192.168.1.141</div>'+
-   '</div>';
+   var rows=[['TODAY','PARTLY CLOUDY','29C','27..31  H74%','SUN',tc],['TOMORROW','RAIN SHOWERS','28C','26..30  H81%','RAIN',dc],['28 JUL','CLOUDY','30C','27..32  H70%','CLOUD',ac]];
+   return '<div class="pv-frame" style="background:#000;padding:6px;box-sizing:border-box;font-family:ui-monospace,monospace">'+rows.map(function(d,i){return '<div style="height:72px;margin-bottom:'+(i<2?6:0)+'px;background:'+(i===1?'#101018':'#081421')+';border:1px solid '+d[5]+';border-radius:8px;padding:8px;box-sizing:border-box;position:relative"><b style="font-size:16px;color:'+d[5]+'">'+d[0]+'</b><b style="position:absolute;left:154px;top:8px;font-size:16px;color:#fff">'+d[2]+'</b><div style="font-size:8px;color:#fff;margin-top:8px">'+d[1]+'</div><div style="font-size:8px;color:#848284;margin-top:5px">'+d[3]+'</div><span style="position:absolute;right:4px;bottom:10px;border:1px solid '+d[5]+';border-radius:8px;padding:7px 5px;font-size:8px;color:'+d[5]+'">'+d[4]+'</span></div>'}).join('')+'</div>';
   }
   function pvScreenGallery(){
    var photos = window._emulatorPhotos || [];
@@ -219,19 +200,18 @@ const DEVICE_PREVIEW_JS = String.raw`
      '</div>';
    }
    return '<div class="pv-frame"><div class="pv-top"><b>PHOTO ALBUM</b><span>240x240</span><span class="pv-time">EMPTY</span></div>'+
-    '<div style="height:175px;display:grid;place-items:center;background:#0d1828;border-radius:8px;margin:10px 0;border:1px solid #193047"><span class="pv-green" style="font-size:13px;text-align:center">🖼 No photos uploaded yet<br><span style="font-size:11px;opacity:.6">Upload photos in Gallery tab</span></span></div></div>';
+    '<div style="height:175px;display:grid;place-items:center;background:#0d1828;border-radius:8px;margin:10px 0;border:1px solid #193047"><span class="pv-green" style="font-size:13px;text-align:center">NO PHOTOS<br><span style="font-size:11px;opacity:.6">Upload in Gallery tab</span></span></div></div>';
   }
   function pvScreenGithub(){
    var src=location.protocol+'//'+location.hostname+':${PORT}/embed';
    return '<div class="pv-frame pv-live-frame"><iframe title="Live GH//STAT preview" src="'+src+'"></iframe></div>';
   }
   function pvMarkup(mode){
-   if(mode==='usage') return pvScreenUsage();
+   if(mode==='codex') return pvScreenCodex();
    if(mode==='github') return pvScreenGithub();
    if(mode==='clock') return pvScreenClock(0);
-   if(mode==='clock_weather') return pvScreenClock(1);
-   if(mode==='clock_modern') return pvScreenClock(2);
-   if(mode==='clock_forecast') return pvScreenClock(3);
+   if(mode==='clock_time2') return pvScreenClock(1);
+   if(mode==='clock_weather2') return pvScreenClock(2);
    if(mode==='gallery') return pvScreenGallery();
    return pvScreenStocks();
   }
@@ -275,7 +255,7 @@ const DEVICE_PREVIEW_JS = String.raw`
  }
  window.pvRestart=pvRestart;
  function pvChanged(e){
-  if(e&&e.target&&['mode','carouselSec','carouselTicker','carouselUsage','carouselGithub','carouselClockDigital','carouselClockWeather','carouselClockModern','carouselClockForecast','carouselGallery','brightness','rotation','weatherCity','clockTheme'].indexOf(e.target.id)>=0){
+  if(e&&e.target&&['mode','carouselSec','carouselTicker','carouselGithub','carouselCodex','carouselClockTime1','carouselClockTime2','carouselClockWeather2','carouselGallery','brightness','rotation','weatherCity','clockTheme','timeColor','dateColor','accentColor','bgColor'].indexOf(e.target.id)>=0){
    if(pvSyncTimer)clearTimeout(pvSyncTimer);
    pvSyncTimer=setTimeout(pvRestart,120);
   }
@@ -318,19 +298,18 @@ function mergeConfig(base, update) {
 }
 
 const initialFeed = `http://127.0.0.1:${PORT}/api/github`;
-const initialAiUsageFeed = `http://${lanIps()[0] || '127.0.0.1'}:${PORT}/api/ai-usage`;
 const DEFAULT_DEVICE_CONFIG = {
   wifi: [{ ssid: 'Local test WiFi', passSet: true }], apSsid: 'SmallTV-Setup', apPass: '', apPassSet: false,
   hostname: 'smalltv-emulator', adminPass: '1111', mode: 'github', carouselSec: 30,
-  carouselTicker: true, carouselUsage: true, carouselGithub: true,
-  carouselClock: true, carouselClockDigital: true, carouselClockWeather: false, carouselClockModern: false,
+  carouselTicker: true, carouselGithub: true, carouselCodex: true,
+  carouselClock: true, carouselClockTime1: true, carouselClockTime2: false, carouselClockWeather2: true,
   carouselGallery: true,
   httpTimeout: 8000, brightness: 90, autoBrightness: false, backlightInverted: false, rotation: 0,
-  features: { ticker: true, usage: true, github: true, clock: true, gallery: true }, chip: 'esp8266',
+  features: { ticker: true, github: true, clock: true, gallery: true }, chip: 'esp8266',
   ticker: { webhookUrl: '', range: '1d', points: 48, pollSec: 120, rotateSec: 10, colorInverted: false, changeOnRange: true, showName: true, showPrice: true, showChange: true, showChart: true, showRangeLabel: true, showUpdatedAgo: false, showPageDots: true, showPortfolio: true, symbols: [] },
-  usage: { usageUrl: initialAiUsageFeed, pollSec: 120 },
   github: { statusUrl: initialFeed, tokenSet: false, pollSec: 15, rotateSec: 8 },
-  clock: { tz: 'Asia/Bangkok', tzPosix: '<+07>-7', nightEnabled: false, nightStart: '22:00', nightEnd: '07:00', nightLevel: 0, format24h: true, showSeconds: false, showDate: true, theme: 0, weatherCity: 'Hua Hin', weatherApiKey: '', weatherUnits: 'c', weatherPollSec: 900 },
+  codex: { statusUrl: '', pollSec: 30, rotateSec: 8 },
+  clock: { tz: 'Europe/London', tzPosix: 'GMT0BST,M3.5.0/1,M10.5.0', nightEnabled: false, nightStart: '22:00', nightEnd: '07:00', nightLevel: 0, format24h: true, showSeconds: false, showDate: true, theme: 0, weatherCity: 'London', weatherApiKey: '', weatherUnits: 'c', weatherPollSec: 900 },
   gallery: { rotateSec: 10, randomOrder: false },
 };
 let deviceConfig = structuredClone(DEFAULT_DEVICE_CONFIG);
@@ -340,6 +319,9 @@ try {
   deviceConfig = mergeConfig(deviceConfig, savedDevice);
 } catch {}
 if (deviceConfig.mode === 'radar') deviceConfig.mode = 'stocks';
+if (['clock_time3', 'clock_weather1', 'clock_weather'].includes(deviceConfig.mode)) deviceConfig.mode = 'clock_time2';
+if (deviceConfig.mode === 'clock_forecast') deviceConfig.mode = 'clock_weather2';
+if (deviceConfig.clock && Number(deviceConfig.clock.theme) > 2) deviceConfig.clock.theme = 2;
 delete deviceConfig.radar;
 delete deviceConfig.carouselRadar;
 
@@ -347,7 +329,7 @@ function list(value) {
   return String(value || '').split(',').map(x => x.trim()).filter(Boolean);
 }
 
-const envOwners = list(process.env.GITHUB_OWNERS || 'bairachnyi,ananas-it');
+const envOwners = list(process.env.GITHUB_OWNERS || 'octo-user,acme-labs');
 const envGithubToken = process.env.GITHUB_TOKEN || '';
 let bridgeConfig = {
   mode: process.env.GITHUB_MODE || 'mock',
@@ -372,34 +354,34 @@ let githubRate = { limit: 0, remaining: 0, resetAt: 0, resource: 'core' };
 
 const scenarios = {
   idle: [
-    item('bairachnyi/smalltv-ultra', 'action', 'Build firmware', 'main', 'completed', 'success', 180),
-    item('ananas-it/web', 'deployment', 'production', 'main', 'completed', 'success', 620),
-    item('ananas-it/api', 'release', 'Release v2.4.1', 'main', 'completed', 'success', 980),
+    item('octo-user/demo-dashboard', 'action', 'Build firmware', 'main', 'completed', 'success', 180),
+    item('acme-labs/web', 'deployment', 'production', 'main', 'completed', 'success', 620),
+    item('acme-labs/api', 'release', 'Release v2.4.1', 'main', 'completed', 'success', 980),
   ],
   deploying: [
-    item('ananas-it/web', 'deployment', 'production', 'main', 'in_progress', '', 44),
-    item('ananas-it/api', 'action', 'Tests', 'feature/auth', 'queued', '', 12),
-    item('bairachnyi/smalltv-ultra', 'action', 'Build firmware', 'main', 'completed', 'success', 210),
-    item('ananas-it/mobile', 'pull_request', 'PR #82 checks', 'feature/login', 'in_progress', '', 31),
+    item('acme-labs/web', 'deployment', 'production', 'main', 'in_progress', '', 44),
+    item('acme-labs/api', 'action', 'Tests', 'feature/auth', 'queued', '', 12),
+    item('octo-user/demo-dashboard', 'action', 'Build firmware', 'main', 'completed', 'success', 210),
+    item('acme-labs/mobile', 'pull_request', 'PR #82 checks', 'feature/login', 'in_progress', '', 31),
   ],
   failure: [
-    item('ananas-it/api', 'deployment', 'production', 'main', 'completed', 'failure', 75),
-    item('ananas-it/web', 'pull_request', 'PR #41 checks', 'release', 'completed', 'failure', 132),
-    item('bairachnyi/smalltv-ultra', 'action', 'Build firmware', 'main', 'completed', 'success', 420),
+    item('acme-labs/api', 'deployment', 'production', 'main', 'completed', 'failure', 75),
+    item('acme-labs/web', 'pull_request', 'PR #41 checks', 'release', 'completed', 'failure', 132),
+    item('octo-user/demo-dashboard', 'action', 'Build firmware', 'main', 'completed', 'success', 420),
   ],
   mixed: [
-    item('ananas-it/customer-portal-production', 'deployment', 'Deploy production with database migrations and cache warmup', 'feature/github-deployment-dashboard', 'in_progress', '', 51),
-    item('ananas-it/api', 'action', 'Tests', 'feature/auth', 'completed', 'failure', 95),
-    item('bairachnyi/smalltv-ultra', 'action', 'Build firmware', 'main', 'completed', 'success', 190),
-    item('ananas-it/mobile', 'pull_request', 'PR #82 checks', 'feature/login', 'queued', '', 18),
-    item('ananas-it/infrastructure', 'deployment', 'staging', 'main', 'completed', 'success', 720),
-    item('ananas-it/web', 'release', 'Release v3.8.0', 'main', 'completed', 'success', 1400),
+    item('acme-labs/customer-portal-production', 'deployment', 'Deploy production with database migrations and cache warmup', 'feature/github-deployment-dashboard', 'in_progress', '', 51),
+    item('acme-labs/api', 'action', 'Tests', 'feature/auth', 'completed', 'failure', 95),
+    item('octo-user/demo-dashboard', 'action', 'Build firmware', 'main', 'completed', 'success', 190),
+    item('acme-labs/mobile', 'pull_request', 'PR #82 checks', 'feature/login', 'queued', '', 18),
+    item('acme-labs/infrastructure', 'deployment', 'staging', 'main', 'completed', 'success', 720),
+    item('acme-labs/web', 'release', 'Release v3.8.0', 'main', 'completed', 'success', 1400),
   ],
 };
 
 const errorScenarios = {
-  token_error: { code: 'TOKEN_DENIED', message: 'The token lacks permission or organization approval.', repo: 'ananas-it/api', source: 'github' },
-  repo_error: { code: 'REPOSITORY_NOT_FOUND', message: 'Repository not found or the token cannot access it.', repo: 'ananas-it/private-app', source: 'github' },
+  token_error: { code: 'TOKEN_DENIED', message: 'The token lacks permission or organization approval.', repo: 'acme-labs/api', source: 'github' },
+  repo_error: { code: 'REPOSITORY_NOT_FOUND', message: 'Repository not found or the token cannot access it.', repo: 'acme-labs/private-app', source: 'github' },
   bridge_offline: { code: 'BRIDGE_OFFLINE', message: 'Cannot connect to the GitHub bridge.', repo: '', source: 'network' },
   stale_data: { code: 'DATA_STALE', message: 'Last successful data is too old.', repo: '', source: 'bridge' },
 };
@@ -493,7 +475,7 @@ function normalizeConfig(input, previous = bridgeConfig, strict = false) {
   const accounts = Array.isArray(input.accounts) ? input.accounts.slice(0, 6).map((item, index) => {
     const rawOwner = String(item?.owner || '').trim();
     const owner = cleanName(item?.owner);
-    if (strict && (!owner || owner !== rawOwner)) invalid('INVALID_OWNER', `Account row ${index + 1}: use only the GitHub login, for example ananas-it.`, `accounts.${index}.owner`);
+    if (strict && (!owner || owner !== rawOwner)) invalid('INVALID_OWNER', `Account row ${index + 1}: use only the GitHub login, for example acme-labs.`, `accounts.${index}.owner`);
     if (strict && seenOwners.has(owner.toLowerCase())) invalid('DUPLICATE_OWNER', `Account ${owner} is listed more than once.`, `accounts.${index}.owner`);
     seenOwners.add(owner.toLowerCase());
     const old = oldTokens.get(owner.toLowerCase()) || '';
@@ -508,7 +490,7 @@ function normalizeConfig(input, previous = bridgeConfig, strict = false) {
   const repositories = Array.isArray(rawRepositories)
     ? [...new Set(rawRepositories.map((value, index) => {
       const repo = cleanRepo(value);
-      if (strict && !repo) invalid('INVALID_REPOSITORY', `Repository row ${index + 1}: use owner/repository, for example ananas-it/web.`, 'repositories');
+      if (strict && !repo) invalid('INVALID_REPOSITORY', `Repository row ${index + 1}: use owner/repository, for example acme-labs/web.`, 'repositories');
       return repo;
     }).filter(Boolean))].slice(0, 50)
     : previous.repositories;
@@ -566,7 +548,7 @@ function publicConfig() {
 
 function publicDeviceConfig() {
   const copy = structuredClone(deviceConfig);
-  copy.features = { ticker: true, usage: true, github: true, clock: true, gallery: true };
+  copy.features = { ticker: true, github: true, clock: true, gallery: true, codex: true };
   if (copy.mode === 'radar') copy.mode = 'stocks';
   delete copy.radar;
   delete copy.carouselRadar;
@@ -918,7 +900,7 @@ function screenHtml() {
   const scenarioButtons = [...Object.keys(scenarios), ...Object.keys(errorScenarios)].map(s => `<button onclick="pick('${s}')">${s}</button>`).join('');
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>SmallTV GitHub emulator</title>
 <style>*{box-sizing:border-box}body{margin:0;background:#0e1117;color:#e6edf3;font:14px system-ui;min-height:100vh;padding:40px}.wrap{display:flex;gap:32px;align-items:flex-start;flex-wrap:wrap;justify-content:center}.device{padding:22px;background:#272b31;border-radius:22px;box-shadow:0 16px 50px #0008;position:sticky;top:30px}.screen{width:240px;height:240px;background:#050a12;padding:6px 4px;overflow:hidden;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.opshead{height:25px;border-bottom:1px solid #193047;display:flex;align-items:flex-start;padding:1px 3px;font-size:17px;font-weight:900;position:relative}.opshead:after{content:'';position:absolute;bottom:-1px;left:0;width:54px;height:1px;background:#39e7ff}.slash{color:#39e7ff}.live{margin-left:auto;color:#718096;font-size:8px;padding-top:5px}.live:before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:#39e7ff;box-shadow:0 0 7px #39e7ff;margin-right:5px}.page{color:#718096;font-size:8px;padding:5px 0 0 9px}.sum{height:25px;display:flex;align-items:center;justify-content:space-around;color:#718096;font-size:9px}.metric i{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px}.metric b{color:#f2f6fa;margin-left:3px}.list{display:grid;gap:4px}.item,.panel,.error-card{background:#0d1828;border:1px solid #193047;border-radius:6px}.item{height:55px;padding:4px 7px 3px 29px;position:relative;border-left:3px solid var(--state)}.status-icon{position:absolute;left:7px;top:8px;width:18px;height:18px;border-radius:50%}.status-icon.run{border:2px solid #345065;border-top-color:#39e7ff;animation:spin .75s linear infinite}.status-icon.wait{border:2px dotted #ffb627;animation:spin 1.25s linear infinite}.status-icon.ok{border:2px solid #59ef9a;animation:successGlow 1.6s ease-in-out infinite}.status-icon.ok:after{content:'';position:absolute;width:8px;height:4px;border-left:2px solid #59ef9a;border-bottom:2px solid #59ef9a;transform:rotate(-45deg);left:3px;top:4px}.status-icon.fail{background:#ff5d68;color:#050a12;text-align:center;font:bold 14px/18px system-ui;animation:failPulse 1.1s ease-out infinite}.repo{font-weight:800;font-size:13px;max-width:145px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.detail{color:#718096;font-size:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}.state{position:absolute;right:7px;top:6px;color:var(--state);font-size:9px;font-weight:900}.meta{position:absolute;left:7px;right:7px;bottom:4px;height:11px;font-size:8px;color:#718096}.tag{display:inline-block;background:#193047;color:var(--state);padding:1px 3px;border-radius:3px;margin-right:5px}.branch{display:inline-block;max-width:92px;overflow:hidden;white-space:nowrap;vertical-align:bottom;text-overflow:ellipsis}.when{float:right;color:#aab5c2}.error-card{height:169px;margin:18px 6px;padding:22px 10px;text-align:center}.error-icon{width:20px;height:20px;border-radius:50%;background:#ff5d68;box-shadow:0 0 0 5px #ff5d6833;margin:auto;animation:failPulse 1.1s ease-out infinite}.error-title{font-size:17px;font-weight:800;margin:12px 0}.error-message,.error-repo{font-size:9px;color:#718096;margin:6px}.error-repo{color:#e6edf3}.error-action{color:#39e7ff;margin-top:20px;font-size:9px}@keyframes spin{to{transform:rotate(360deg)}}@keyframes successGlow{50%{box-shadow:0 0 9px #59ef9a;transform:scale(1.08)}}@keyframes failPulse{70%{box-shadow:0 0 0 7px #ff5d6800}}.controls{width:420px}.panel{padding:16px;margin:12px 0}.controls button{padding:9px 12px;margin:0 5px 7px 0;background:#21262d;color:#fff;border:1px solid #30363d;border-radius:7px;cursor:pointer}.controls button.primary{background:#238636;border-color:#2ea043}.controls button:hover{border-color:#58a6ff}label{display:block;color:#8b949e;font-size:12px;margin:9px 0 4px}input,select,textarea{width:100%;padding:9px;background:#0d1117;color:#e6edf3;border:1px solid #30363d;border-radius:6px}input[type=checkbox]{width:auto;margin-right:7px}textarea{min-height:65px;resize:vertical}.account{display:grid;grid-template-columns:1fr 1.4fr 34px;gap:6px;margin:6px 0}.account button{margin:0;padding:5px}.hint{color:#8b949e;font-size:12px}code,a{color:#79c0ff}</style></head>
-<body><div class="wrap"><div class="device"><div id="deviceScreen" class="screen"></div></div><div class="controls"><h1>GitHub dashboard emulator <small class="hint">v0.5.0</small></h1><p>240×240 preview for SmallTV Ultra.</p><div>${scenarioButtons}</div><div class="panel"><h2>GitHub bridge settings</h2><p class="hint">Create a <a href="https://github.com/settings/personal-access-tokens/new" target="_blank">fine-grained token</a>, choose the resource owner and selected repositories, then grant read-only Actions, Deployments, Pull requests, Checks and Contents. Use one approved token per private owner; it must begin with <code>github_pat_</code>.</p><label>Mode</label><select id="bridgeMode"><option value="mock">Mock data</option><option value="live">Live GitHub</option></select><label>Delivery</label><select id="delivery"><option value="webhook">GitHub webhooks — near real time</option><option value="polling">REST polling</option></select><label>Public webhook URL</label><input id="webhookUrl" type="url" placeholder="https://example.com/api/github/webhook"><label>Webhook secret</label><div class="account"><input id="webhookSecret" type="password" placeholder="blank keeps saved secret"><button onclick="generateWebhookSecret()">Generate</button></div><p class="hint">The public HTTPS endpoint must forward the unchanged body and GitHub headers here. Webhook mode does not poll GitHub REST for normal updates.</p><label>Events</label><div><label><input id="evActions" type="checkbox"> Actions</label><label><input id="evDeployments" type="checkbox"> Deployments / environments</label><label><input id="evPullRequests" type="checkbox"> Pull request checks</label><label><input id="evReleases" type="checkbox"> Releases</label></div><label>Accounts and access tokens</label><div id="accounts"></div><button onclick="addAccount()">+ account</button><p class="hint">Blank keeps the saved token. A different saved token can authenticate public organization requests, but private organization repositories require a token for that resource owner and may require administrator approval.</p><label>Repository allowlist (one owner/repo per line; blank = all webhook repositories for listed owners)</label><textarea id="repositories" placeholder="bairachnyi/smalltv-ultra"></textarea><p class="hint">In webhook mode a blank list accepts every installed repository belonging to the configured owners.</p><label>GitHub refresh / bridge cache (seconds)</label><input id="cacheSec" type="number" min="60" max="3600"><p class="hint">Used only by REST polling. The display may always read this local bridge every 10 seconds.</p><p id="rateState" class="hint"></p><button class="primary" onclick="saveBridge()">Save bridge settings</button><span id="saveState" class="hint"></span></div><p>Device feed: <code id="feedUrl"></code></p></div></div>
+<body><div class="wrap"><div class="device"><div id="deviceScreen" class="screen"></div></div><div class="controls"><h1>GitHub dashboard emulator <small class="hint">v0.8.3</small></h1><p>240×240 preview for SmallTV Ultra.</p><div>${scenarioButtons}</div><div class="panel"><h2>GitHub bridge settings</h2><p class="hint">Create a <a href="https://github.com/settings/personal-access-tokens/new" target="_blank">fine-grained token</a>, choose the resource owner and selected repositories, then grant read-only Actions, Deployments, Pull requests, Checks and Contents. Use one approved token per private owner; it must begin with <code>github_pat_</code>.</p><label>Mode</label><select id="bridgeMode"><option value="mock">Mock data</option><option value="live">Live GitHub</option></select><label>Delivery</label><select id="delivery"><option value="webhook">GitHub webhooks — near real time</option><option value="polling">REST polling</option></select><label>Public webhook URL</label><input id="webhookUrl" type="url" placeholder="https://example.com/api/github/webhook"><label>Webhook secret</label><div class="account"><input id="webhookSecret" type="password" placeholder="blank keeps saved secret"><button onclick="generateWebhookSecret()">Generate</button></div><p class="hint">The public HTTPS endpoint must forward the unchanged body and GitHub headers here. Webhook mode does not poll GitHub REST for normal updates.</p><label>Events</label><div><label><input id="evActions" type="checkbox"> Actions</label><label><input id="evDeployments" type="checkbox"> Deployments / environments</label><label><input id="evPullRequests" type="checkbox"> Pull request checks</label><label><input id="evReleases" type="checkbox"> Releases</label></div><label>Accounts and access tokens</label><div id="accounts"></div><button onclick="addAccount()">+ account</button><p class="hint">Blank keeps the saved token. A different saved token can authenticate public organization requests, but private organization repositories require a token for that resource owner and may require administrator approval.</p><label>Repository allowlist (one owner/repo per line; blank = all webhook repositories for listed owners)</label><textarea id="repositories" placeholder="octo-user/demo-dashboard"></textarea><p class="hint">In webhook mode a blank list accepts every installed repository belonging to the configured owners.</p><label>GitHub refresh / bridge cache (seconds)</label><input id="cacheSec" type="number" min="60" max="3600"><p class="hint">Used only by REST polling. The display may always read this local bridge every 10 seconds.</p><p id="rateState" class="hint"></p><button class="primary" onclick="saveBridge()">Save bridge settings</button><span id="saveState" class="hint"></span></div><p>Device feed: <code id="feedUrl"></code></p></div></div>
 <script>const el=id=>document.getElementById(id);const active=s=>['in_progress','queued','waiting','pending'].includes(s);const stateInfo=s=>s==='success'?{color:'#59ef9a',label:'PASS',icon:'ok'}:s==='failure'?{color:'#ff5d68',label:'FAIL',icon:'fail'}:s==='in_progress'?{color:'#39e7ff',label:'RUN',icon:'run'}:['queued','waiting','pending'].includes(s)?{color:'#ffb627',label:'WAIT',icon:'wait'}:{color:'#718096',label:'STOP',icon:'stop'};
 function esc(s){return String(s||'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]))}function addAccount(a={}){let row=document.createElement('div');row.className='account';row.innerHTML='<input class="owner" placeholder="owner" value="'+esc(a.owner)+'"><input class="token" type="password" placeholder="'+(a.tokenSet?'saved — blank keeps it':'github_pat_…')+'"><button onclick="this.parentElement.remove()">×</button>';el('accounts').appendChild(row)}function generateWebhookSecret(){let bytes=new Uint8Array(32);crypto.getRandomValues(bytes);el('webhookSecret').value=[...bytes].map(x=>x.toString(16).padStart(2,'0')).join('');el('webhookSecret').type='text';el('webhookSecret').select()}
 async function loadConfig(){let c=await fetch('/api/config').then(r=>r.json()),e=c.events||{},p=c.polling||{},rl=c.rateLimit||{},wh=c.webhook||{};el('bridgeMode').value=c.mode;el('delivery').value=c.delivery||'polling';el('webhookUrl').value=wh.publicUrl||'';el('webhookSecret').value='';el('webhookSecret').placeholder=wh.secretSet?'saved — blank keeps it':'Generate a secret';el('cacheSec').value=c.cacheSec;el('repositories').value=(c.repositories||[]).join('\\n');el('evActions').checked=e.actions!==false;el('evDeployments').checked=e.deployments!==false;el('evPullRequests').checked=e.pullRequests!==false;el('evReleases').checked=e.releases!==false;el('accounts').innerHTML='';(c.accounts||[]).forEach(addAccount);if(!c.accounts?.length)addAccount();el('rateState').textContent=c.delivery==='webhook'?('Webhook: '+(wh.secretSet?'secured':'secret missing')+' · '+(wh.received||0)+' deliveries · '+(wh.tracked||0)+' tracked'):(p.effectiveCacheSec?'Effective GitHub refresh: '+p.effectiveCacheSec+'s · about '+p.requestsPerRefresh+' requests/cycle. ':'')+(rl.blocked&&rl.blockedUntil?'Paused until '+new Date(rl.blockedUntil).toLocaleTimeString()+'.':rl.limit?'Quota: '+rl.remaining+'/'+rl.limit+' remaining.':'')}
@@ -1065,17 +1047,6 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && req.url === '/api/device-feed') return json(res, 200, refreshAges(await fetchDeviceFeed()));
     if (req.method === 'GET' && req.url === '/api/logs') return json(res, 200, { ok: true, items: logs });
     if (req.method === 'POST' && req.url === '/api/logs/clear') { logs.length = 0; return json(res, 200, { ok: true }); }
-    if (req.method === 'GET' && req.url === '/api/ai-usage') {
-      return json(res, 200, {
-        ok: true,
-        a: Math.max(0, Math.min(100, Number(process.env.AI_ANTIGRAVITY_PCT || 34))),
-        ar: Math.max(0, Number(process.env.AI_ANTIGRAVITY_RESET_MIN || 120)),
-        c: Math.max(0, Math.min(100, Number(process.env.AI_CODEX_PCT || 57))),
-        cr: Math.max(0, Number(process.env.AI_CODEX_RESET_MIN || 360)),
-        st: 'mock',
-        updatedAt: new Date().toISOString(),
-      });
-    }
     if (req.method === 'GET' && req.url.startsWith('/api/github')) {
       const data = bridgeConfig.mode === 'live'
         ? (bridgeConfig.delivery === 'webhook' ? webhookData() : await liveData())
@@ -1114,12 +1085,16 @@ const server = http.createServer(async (req, res) => {
 });
 
 const startedAt = Date.now();
+let simulatedCodex = {
+  valid: true, error: false, fresh: true, primaryPct: 81, primaryReset: '14:42',
+  secondaryPct: 95, todayTokens: 31700, todayCalls: 14, weekTokens: 2160000,
+};
 function deviceStatus() {
   return {
-    ok: true, fw: 'smalltv-ultra', version: '0.6.0', repo: 'https://github.com/bairachnyi/smalltv-ultra',
+    ok: true, fw: 'smalltv-ultra', version: '0.8.3', repo: 'https://github.com/octo-user/demo-dashboard',
     mode: 'sta', connected: true, ssid: 'Local test WiFi', ip: `127.0.0.1:${SETTINGS_PORT}`, rssi: -42,
     heap: 49296, maxblk: 30000, contstk: 4096, uptime: Math.floor((Date.now() - startedAt) / 1000),
-    reset: 'Local emulator', synced: true, time: new Date().toISOString(), tz: deviceConfig.clock?.tz || 'Asia/Bangkok', night: false, tickers: [],
+    reset: 'Local emulator', synced: true, time: new Date().toISOString(), tz: deviceConfig.clock?.tz || 'Europe/London', night: false, tickers: [], codex: simulatedCodex,
   };
 }
 
@@ -1143,6 +1118,19 @@ const deviceServer = http.createServer(async (req, res) => {
     if (req.method === 'GET' && req.url === '/api/config') return json(res, 200, publicDeviceConfig());
     if (req.method === 'POST' && req.url === '/api/config') { saveDeviceConfig(await readBody(req)); return json(res, 200, { ok: true, reboot: false }); }
     if (req.method === 'GET' && req.url === '/api/status') return json(res, 200, deviceStatus());
+    if (req.method === 'POST' && (req.url === '/api/codex' || req.url === '/api/codex/status')) {
+      const body = await readBody(req);
+      simulatedCodex = {
+        valid: body.ok !== false, error: body.ok === false, fresh: true,
+        primaryPct: Number(body.primary_pct ?? simulatedCodex.primaryPct),
+        primaryReset: String(body.primary_reset ?? simulatedCodex.primaryReset),
+        secondaryPct: Number(body.secondary_pct ?? simulatedCodex.secondaryPct),
+        todayTokens: Number(body.today_tokens ?? simulatedCodex.todayTokens),
+        todayCalls: Number(body.today_calls ?? simulatedCodex.todayCalls),
+        weekTokens: Number(body.week_tokens ?? simulatedCodex.weekTokens),
+      };
+      return json(res, body.ok === false ? 400 : 200, { ok: body.ok !== false });
+    }
     if (req.method === 'GET' && req.url === '/api/scan') return json(res, 200, [{ ssid: 'Local test WiFi', rssi: -42, enc: true }, { ssid: 'Guest 2.4G', rssi: -68, enc: true }]);
     if (req.method === 'GET' && req.url === '/api/photos') {
       const fsTotal = 3 * 1024 * 1024;
@@ -1206,8 +1194,8 @@ const deviceServer = http.createServer(async (req, res) => {
       return res.end(JSON.stringify(deviceConfig, null, 2));
     }
     if (req.method === 'POST' && req.url === '/api/import') { saveDeviceConfig(await readBody(req)); return json(res, 200, { ok: true, reboot: true }); }
-    if (req.method === 'GET' && req.url === '/api/checkupdate') return json(res, 200, { ok: true, current: '0.7.0', latest: '0.7.0', newer: false });
-    if (req.method === 'POST' && ['/api/reboot', '/api/refresh', '/api/usage', '/api/ai-usage'].includes(req.url)) { record('info', `device${req.url.replace('/api', '').replaceAll('/', '.')}`, { message: 'Simulated locally' }); return json(res, 200, { ok: true, simulated: true }); }
+    if (req.method === 'GET' && req.url === '/api/checkupdate') return json(res, 200, { ok: true, current: '0.8.3', latest: '0.8.3', newer: false });
+    if (req.method === 'POST' && ['/api/reboot', '/api/refresh'].includes(req.url)) { record('info', `device${req.url.replace('/api', '').replaceAll('/', '.')}`, { message: 'Simulated locally' }); return json(res, 200, { ok: true, simulated: true }); }
     if (req.method === 'POST' && req.url === '/api/factory') { deviceConfig = structuredClone(DEFAULT_DEVICE_CONFIG); saveDeviceConfig({}); record('warn', 'device.factory_reset', { message: 'Local emulator defaults restored' }); return json(res, 200, { ok: true, reboot: true, simulated: true }); }
     if (req.method === 'POST' && req.url === '/api/selfupdate') { record('warn', 'device.self_update.skipped', { message: 'Firmware update is disabled in the local emulator' }); return json(res, 200, { ok: true, simulated: true }); }
     if (req.url === '/update') { record('warn', 'device.ota.skipped', { message: 'OTA is disabled in the local emulator' }); res.writeHead(501, { 'Content-Type': 'text/plain; charset=utf-8' }); return res.end('Firmware upload is disabled in the local emulator.'); }

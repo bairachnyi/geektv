@@ -1,6 +1,7 @@
 // Gfx.h — shared ST7789 device, drawing primitives, and boot/status screens.
 //
-// This is the core display layer. Feature modes (ticker / usage / GitHub)
+// This is the core display layer. Feature modes (ticker, clock/weather,
+// gallery, Codex and GitHub)
 // render on top of it via gfxDev() and the exposed text helpers; each feature owns
 // its own feature-specific rendering. Nothing feature-specific lives here.
 #pragma once
@@ -24,6 +25,13 @@ void         gfxBegin(const Settings& s);
 void         gfxSetBrightness(uint8_t pct, bool inverted);
 void         gfxSetRotation(uint8_t r);
 Arduino_GFX* gfxDev();                 // shared draw target for feature renderers
+
+// Batch bitmap writes keep one SPI transaction open across JPEG MCU blocks or
+// GIF scanlines. Call begin/end as a pair; coordinates must already be clipped.
+void gfxBeginBitmapBatch();
+void gfxDraw16bitBeRGBBitmapBatch(int16_t x, int16_t y, uint16_t* bitmap, int16_t w, int16_t h);
+void gfxDraw16bitRGBBitmapBatch(int16_t x, int16_t y, uint16_t* bitmap, int16_t w, int16_t h);
+void gfxEndBitmapBatch();
 
 // ---- Drawing Primitives ---------------------------------------------------
 void    gfxClear();

@@ -48,7 +48,7 @@ GitHub fine-grained PAT никогда не возвращается API и не
   "mode": "github",
   "brightness": 80,
   "github": {
-    "statusUrl": "http://192.168.1.139:8788/api/github",
+    "statusUrl": "http://192.168.1.50:8788/api/github",
     "pollSec": 15,
     "rotateSec": 8
   }
@@ -83,6 +83,7 @@ reboot примерно через 800 ms. Ошибки body: `400 no body` ил
 | `synced`, `time`, `tz` | NTP/timezone status. |
 | `night`, `nightHeld`, `clockFresh` | Night state machine. |
 | `tickers` | Symbol status/price/change summary, если ticker feature включён. |
+| `codex` | Freshness, structured error и последние usage metrics. |
 | `updateMsg` | Последний self-update result/error, если есть. |
 
 ### `GET /api/scan`
@@ -122,9 +123,9 @@ reboot примерно через 800 ms. Ошибки body: `400 no body` ил
 
 ```json
 {
-  "current": "0.5.0",
+  "current": "0.8.3",
   "ok": true,
-  "latest": "v0.5.0",
+  "latest": "v0.8.3",
   "newer": false
 }
 ```
@@ -136,13 +137,22 @@ reboot примерно через 800 ms. Ошибки body: `400 no body` ил
 Возвращает ответ немедленно и ставит update в основной loop. На ESP8266 далее
 следует update-at-boot flow.
 
-### `POST /api/ai-usage`
+### `POST /api/codex` и `POST /api/codex/status`
 
-Предпочтительный push endpoint trusted AI Usage bridge. Принимает compact
-contract `{a,ar,c,cr,st,ok}`, где `a/c` — Antigravity/Codex percentages, а
-`ar/cr` — reset minutes. Возвращает `200 {"ok":true}` либо `400 {"ok":false}`.
+Принимают нормализованный Codex usage JSON от trusted LAN bridge. Успешный push
+сохраняет snapshot и возвращает `200 {"ok":true}`. Некорректный JSON или
+payload со статусом ошибки возвращает `400 {"ok":false}`; причина видна в
+`GET /api/status` и на экране устройства. Push не очищается немедленно после
+приёма и остаётся доступным до следующего корректного snapshot.
 
-`POST /api/usage` и legacy keys `{s,sr,w,wr}` временно сохранены для миграции.
+### Gallery endpoints
+
+- `GET /api/photos` — список JPEG/GIF в LittleFS;
+- `POST /api/photos` — multipart upload, максимум 600 KB;
+- `DELETE /api/photos?name=<file>` — удалить файл gallery.
+
+Имена очищаются от path traversal, а расширение и размер проверяются до
+добавления файла в ротацию.
 
 ### `POST /update`
 
@@ -172,9 +182,9 @@ unknown path в AP mode перенаправляются на `http://192.168.4.
   "delivery": "webhook",
   "cacheSec": 120,
   "accounts": [
-    { "owner": "bairachnyi", "tokenSet": true }
+    { "owner": "octo-user", "tokenSet": true }
   ],
-  "repositories": ["bairachnyi/smalltv-ultra"],
+  "repositories": ["octo-user/demo-dashboard"],
   "events": {
     "actions": true,
     "deployments": true,

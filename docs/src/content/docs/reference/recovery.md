@@ -17,7 +17,9 @@ Keep a `stock-backup.bin` from before your first flash and you can always return
 - The web server is single-threaded, so the UI may pause briefly during a data poll.
 - HTTPS works on the ESP8266 but is RAM-tight. Prefer plain HTTP on your LAN for a webhook if you see instability. The ESP32 boards have more headroom.
 - The GitHub self-update works on every board from 2.7.0. The ESP32 boards download in place; the ESP8266 updates at boot (two reboots — see [Flashing](/smalltv-ultra/getting-started/flashing/#after-the-first-flash)). ESP8266 devices still on 2.6.1 or older have a broken updater and need one manual upload in the Update tab to get current.
-- Fonts are the built-in bitmap font, scaled, chosen for reliability and the retro look. No external font files are needed.
+- Firmware uses bundled GFX bitmap fonts; the emulator uses the matching family,
+  size, coordinates and palette. Browser anti-aliasing can still differ by a few
+  edge pixels from ST7789 glyph rasterization.
 
 ## Credits and references
 
@@ -28,9 +30,11 @@ Keep a `stock-backup.bin` from before your first flash and you can always return
   - [Installing ESPHome on a new smart weather clock (HA community)](https://community.home-assistant.io/t/installing-esphome-on-new-smart-weather-clock-wifi-weather-station-display/1006172), which documented the ESP32-C2 pin map
   - [Puddle of Code, My Own GeekMagic SmallTV](https://puddleofcode.com/story/my-own-geekmagic-smalltv/)
   - [NMMiner's NM-TV-154 custom firmware guide](https://www.nmminer.com/2026/03/02/how-to-develop-nm-tv-custom-firmware/), which documents the NM-TV-154 pin map
-- AI Usage retains pixel-art mascot frames originally adapted from [claudepix](https://claudepix.vercel.app); the displayed provider values now come from the generic local bridge contract.
-- Libraries: [Arduino_GFX](https://github.com/moononournation/Arduino_GFX), [ArduinoJson](https://arduinojson.org/).
+- Libraries: [Arduino_GFX](https://github.com/moononournation/Arduino_GFX), [ArduinoJson](https://arduinojson.org/), [AnimatedGIF](https://github.com/bitbank2/AnimatedGIF).
 
 ## License
 
-[WTFPL](https://github.com/bairachnyi/smalltv-ultra/blob/main/LICENSE). Do What The F*ck You Want To Public License.
+GeekTV is distributed under the
+[MIT License](https://github.com/bairachnyi/geektv/blob/main/LICENSE). Upstream
+attribution is recorded in
+[`NOTICE.md`](https://github.com/bairachnyi/geektv/blob/main/NOTICE.md).

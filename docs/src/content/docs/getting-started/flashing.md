@@ -5,7 +5,7 @@ description: How to install SmallTV Ultra firmware on each board, back up the st
 
 Flash the method that matches your board. The ESP8266 installs over the air from its stock web UI. The ESP32-C2 and the NM-TV-154 install over the USB cable with esptool. Back up the stock image first on any board so you can always go back.
 
-Get the firmware image from the [Actions tab](https://github.com/bairachnyi/smalltv-ultra/actions) (latest `build` run) or the [Releases page](https://github.com/bairachnyi/smalltv-ultra/releases), or [build it yourself](/smalltv-ultra/reference/building/).
+Get the firmware image from the [Actions tab](https://github.com/bairachnyi/geektv/actions) (latest `build` run) or the [Releases page](https://github.com/bairachnyi/geektv/releases), or [build it yourself](/smalltv-ultra/reference/building/).
 
 ## SmallTV (ESP8266)
 
@@ -58,7 +58,7 @@ The SmallTV-ultra is the same ESP-12F (ESP8266) as the original SmallTV: same 4 
 
 The fix is a two-step install through a tiny loader, no soldering. The loader is a ~308 KB image that does fit the stock slot. Once running it uses this firmware's own 4m1m flash layout, whose app region is large, so the full image fits on the second hop.
 
-1. Get the ESP8266 loader binary from the [Releases page](https://github.com/bairachnyi/smalltv-ultra/releases).
+1. Get the ESP8266 loader binary from the [Releases page](https://github.com/bairachnyi/geektv/releases).
 2. Browse to `http://<device-ip>/update` and upload `smalltv-ultra-loader.bin`. It fits the stock slot. The device reboots into the loader.
 3. The loader opens an open WiFi access point named `SmallTV-Loader`. Join it and browse to `http://192.168.4.1/update`.
 4. Upload `smalltv-ultra-firmware.bin` there. It fits because the loader uses this firmware's flash layout, which leaves enough room for the full image. The device reboots into the full custom firmware.
@@ -82,7 +82,7 @@ Keep `stock-backup.bin` somewhere safe. Writing it back with `write_flash 0x0 st
 
 ### Write this firmware
 
-Download the ESP32-C2 factory image from the [Releases page](https://github.com/bairachnyi/smalltv-ultra/releases): a single merged image with the bootloader, partition table, and app (a local build produces the same file as `firmware.factory.bin`). Write it at offset 0:
+Download the ESP32-C2 factory image from the [Releases page](https://github.com/bairachnyi/geektv/releases): a single merged image with the bootloader, partition table, and app (a local build produces the same file as `firmware.factory.bin`). Write it at offset 0:
 
 ```bash
 python -m esptool --chip esp32c2 --port COM3 --baud 921600 write_flash 0x0 smalltv-ultra-firmware-c2.factory.bin
@@ -96,7 +96,7 @@ Use the system esptool, not the one bundled with PlatformIO. The bundled version
 
 ## NM-TV-154 (classic ESP32)
 
-Same procedure as the ESP32-C2, with `--chip esp32` and the ESP32 factory image from the [Releases page](https://github.com/bairachnyi/smalltv-ultra/releases) (or build it with `pio run -e smalltv_esp32`).
+Same procedure as the ESP32-C2, with `--chip esp32` and the ESP32 factory image from the [Releases page](https://github.com/bairachnyi/geektv/releases) (or build it with `pio run -e smalltv_esp32`).
 
 ### Back up the stock image first
 
@@ -121,7 +121,7 @@ With a source checkout, `pio run -e smalltv_esp32 -t upload` does the same thing
 Every board then updates from the browser: open the web UI's **Update** tab and either let the device pull the newest GitHub release itself (each board fetches its own image) or upload a firmware file manually. The manual upload takes the plain app image (`smalltv-ultra-firmware*.bin`), not the `.factory.bin`.
 
 :::caution[ESP8266 on firmware 2.6.1 or older: update manually once]
-The GitHub self-update was broken on the ESP8266 (original SmallTV and SmallTV-ultra) in older upstream firmware: the release check misparsed GitHub's occasionally chunked responses, and the download needs a 16 KB TLS buffer that does not fit next to the running firmware. A broken updater cannot update itself. Update these devices **once by hand** from the [Releases page](https://github.com/bairachnyi/smalltv-ultra/releases) and upload the correct ESP8266 `.bin` in the web UI's **Update** tab.
+The GitHub self-update was broken on the ESP8266 (original SmallTV and SmallTV-ultra) in older upstream firmware: the release check misparsed GitHub's occasionally chunked responses, and the download needs a 16 KB TLS buffer that does not fit next to the running firmware. A broken updater cannot update itself. Update these devices **once by hand** from the [Releases page](https://github.com/bairachnyi/geektv/releases) and upload the correct ESP8266 `.bin` in the web UI's **Update** tab.
 :::
 
 The ESP32 boards download and flash in place. The ESP8266 (from 2.7.0) uses an update-at-boot flow instead, because the download's 16 KB TLS buffer only fits before the firmware's features start: the device queues the update, reboots, shows `updating...` while it downloads, then reboots again into the new version. Expect two reboots and a couple of minutes; if the download fails, the device boots normally and the Update tab shows why.

@@ -22,8 +22,9 @@ screen inspectable without waiting.
 The GitHub screen inside the settings preview is not a separate mockup: it embeds
 the same 240×240 GH//STAT renderer used by port 8788. Cards, colors, FOCUS
 priority, running timers, spinners, status icons, pagination and marquees
-therefore stay visually identical on both pages. Ticker and AI Usage use the
-same dark operations-console palette and card geometry.
+therefore stay visually identical on both pages. Clock, weather, gallery and
+Codex use the same coordinates, palette and card geometry as their firmware
+renderers.
 
 The virtual device is injected only by `emulator/server.mjs`. It is not embedded
 in the ESP8266 firmware, does not use its flash or RAM, and cannot update the
@@ -39,11 +40,11 @@ GitHub/API failures, invalid feed responses and simulated device actions. It
 keeps the latest 250 entries in memory and deliberately excludes passwords and
 tokens. The **Clear logs** button resets it.
 
-The bridge also exposes a mock AI Usage feed at
-`http://<Mac-LAN-IP>:8788/api/ai-usage`. Override its values with
-`AI_ANTIGRAVITY_PCT`, `AI_ANTIGRAVITY_RESET_MIN`, `AI_CODEX_PCT`, and
-`AI_CODEX_RESET_MIN`. This tests the complete device contract without pretending
-that personal Antigravity or Codex plan quotas have public provider APIs.
+The emulator accepts normalized Codex usage at
+`POST http://<Mac-LAN-IP>:8788/api/codex` (also `/api/codex/status`) and exposes
+the same three-page Codex preview used by the settings virtual device. This
+tests the complete display contract without storing provider credentials on the
+ESP8266.
 
 The first page lets
 you switch between idle, deploying, failure, mixed and structured error scenarios. It also edits
@@ -55,7 +56,7 @@ queued, only active events are paginated and the header shows `FOCUS`; completed
 history returns after all active work finishes. The newest event has a cyan frame.
 Configure the SmallTV GitHub feed with the LAN URL printed by the server.
 
-For live public data from `bairachnyi` and `ananas-it`:
+For live public data from `octo-user` and `acme-labs`:
 
 ```bash
 GITHUB_MODE=live node emulator/server.mjs

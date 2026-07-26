@@ -32,7 +32,10 @@ Scan and save up to 4 networks; the device joins the strongest visible one at bo
 
 ### Display
 
-The mode selector (Stock ticker, AI Usage, GitHub, or Carousel, which rotates through the ticked features on a timer), plus brightness with optional auto-brightness, orientation, and backlight polarity.
+The mode selector includes ticker, two clocks, three-day weather, gallery,
+Codex, GitHub and Carousel. Carousel rotates only through the checked screens.
+The same tab controls brightness, optional auto-brightness, orientation and
+backlight polarity.
 
 #### Clock and night mode
 
@@ -53,5 +56,7 @@ Check for and install the newest GitHub release (every board fetches its own ima
 Each mode has its own page:
 
 - [Stock and crypto ticker](/smalltv-ultra/features/ticker/)
-- [AI usage meter](/smalltv-ultra/features/usage/)
+- [Clock and weather](/smalltv-ultra/features/clock-weather/)
+- [Gallery](/smalltv-ultra/features/gallery/)
+- [Codex usage](/smalltv-ultra/features/codex/)
 - [GitHub GH//STAT](/smalltv-ultra/features/github/)

@@ -63,7 +63,7 @@ GitHub-режим превращает SmallTV Ultra в компактную CI/
 
 | Поле | Что вводить | Ограничение/поведение |
 | --- | --- | --- |
-| Status feed URL | LAN-адрес вида `http://192.168.1.139:8788/api/github` | Должен начинаться с `http://` или `https://` и заканчиваться `/api/github`. `localhost` и `127.0.0.1` недоступны устройству. |
+| Status feed URL | Вымышленный LAN-адрес вида `http://192.168.1.50:8788/api/github` | Должен начинаться с `http://` или `https://` и заканчиваться `/api/github`. `localhost` и `127.0.0.1` недоступны устройству. |
 | Device token | Необязательный общий секрет bridge | Это **не** GitHub PAT. Значение должно совпадать с переменной `DEVICE_TOKEN` bridge и отправляется как `X-Device-Token`. Пустое поле сохраняет старое значение. |
 | Refresh data | Частота запроса устройства к bridge | 5–3600 секунд. Обычно 15–30 секунд. |
 | Rotate pages | Время показа страницы | 3–300 секунд. На странице два события. Во время `FOCUS` листаются только активные карточки. |
@@ -82,7 +82,7 @@ GitHub-режим превращает SmallTV Ultra в компактную CI/
 | Deployments & environments | Принимает `deployment` и `deployment_status`. |
 | Pull request checks | Принимает `pull_request` и совокупный `check_suite`. |
 | Releases | Принимает опубликованные `release`. |
-| Owner | Фильтр owner, например `bairachnyi` или `ananas-it`. В webhook-режиме PAT рядом необязателен. |
+| Owner | Фильтр owner, например `octo-user` или `acme-labs`. В webhook-режиме PAT рядом необязателен. |
 | Fine-grained token | Нужен только для REST polling или будущего восстановления состояния через API. |
 | Repository allowlist | Пустое поле принимает все repositories указанных owners. Заполните список только для ограничения экрана. |
 | Bridge cache / GitHub refresh | Используется только REST polling. На webhook delivery не влияет. |
@@ -111,8 +111,8 @@ GitHub App удобнее отдельных repository webhooks: одна ус�
    **Contents**, **Deployments**, **Pull requests**.
 6. Подпишитесь на `workflow_run`, `deployment`, `deployment_status`,
    `pull_request`, `check_suite`, `release`.
-7. Установите App с вариантом **All repositories** отдельно на `bairachnyi` и
-   `ananas-it`. Для организации установка может потребовать подтверждения owner.
+7. Установите App с вариантом **All repositories** отдельно на `octo-user` и
+   `acme-labs`. Для организации установка может потребовать подтверждения owner.
 
 В GitHub нельзя создать один user-level webhook для всех личных repositories,
 поэтому GitHub App предпочтительнее ручного добавления webhook в каждый проект.
@@ -185,7 +185,7 @@ Bridge слушает `0.0.0.0:8788`, поэтому компьютер и Small
   "updatedAt": "2026-07-22T16:05:57.703Z",
   "items": [
     {
-      "repo": "ananas-it/web",
+      "repo": "acme-labs/web",
       "type": "deployment",
       "workflow": "production",
       "branch": "main",

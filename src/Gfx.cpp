@@ -17,6 +17,24 @@ class Arduino_ST7789_SmallTV : public Arduino_ST7789 {
     return Arduino_TFT::begin(speed);
   }
 
+  void beginBitmapBatch() {
+    _bus->beginWrite();
+  }
+
+  void draw16bitBeRGBBitmapBatch(int16_t x, int16_t y, uint16_t* bitmap, int16_t w, int16_t h) {
+    writeAddrWindow(x, y, w, h);
+    _bus->writeBytes(reinterpret_cast<uint8_t*>(bitmap), uint32_t(w) * h * 2);
+  }
+
+  void draw16bitRGBBitmapBatch(int16_t x, int16_t y, uint16_t* bitmap, int16_t w, int16_t h) {
+    writeAddrWindow(x, y, w, h);
+    _bus->writePixels(bitmap, uint32_t(w) * h);
+  }
+
+  void endBitmapBatch() {
+    _bus->endWrite();
+  }
+
 #if TFT_BGR
   // This board's panel is wired B-G-R. Arduino_ST7789 hardcodes the MADCTL RGB
   // order, so re-issue MADCTL with the BGR bit (0x08) set on every rotation
@@ -90,6 +108,22 @@ void gfxSetBrightness(uint8_t pct, bool inverted) {
 
 void gfxSetRotation(uint8_t r) {
   if (gfx) gfx->setRotation(r & 3);
+}
+
+void gfxBeginBitmapBatch() {
+  if (gfx) static_cast<Arduino_ST7789_SmallTV*>(gfx)->beginBitmapBatch();
+}
+
+void gfxDraw16bitBeRGBBitmapBatch(int16_t x, int16_t y, uint16_t* bitmap, int16_t w, int16_t h) {
+  if (gfx) static_cast<Arduino_ST7789_SmallTV*>(gfx)->draw16bitBeRGBBitmapBatch(x, y, bitmap, w, h);
+}
+
+void gfxDraw16bitRGBBitmapBatch(int16_t x, int16_t y, uint16_t* bitmap, int16_t w, int16_t h) {
+  if (gfx) static_cast<Arduino_ST7789_SmallTV*>(gfx)->draw16bitRGBBitmapBatch(x, y, bitmap, w, h);
+}
+
+void gfxEndBitmapBatch() {
+  if (gfx) static_cast<Arduino_ST7789_SmallTV*>(gfx)->endBitmapBatch();
 }
 
 // ---- Drawing Primitives ---------------------------------------------------

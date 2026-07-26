@@ -12,7 +12,7 @@
 // Firmware identity
 // ---------------------------------------------------------------------------
 #define FW_NAME     "geektv"
-#define FW_VERSION  "0.7.0"
+#define FW_VERSION  "0.8.3"
 
 // Project / update references (shown in the web UI; used by the GitHub self-update)
 #define REPO_URL      "https://github.com/bairachnyi/geektv"
@@ -58,17 +58,21 @@
 // ---------------------------------------------------------------------------
 // Display mode — what the device shows
 //   0 = stock / crypto ticker (per-symbol source, see SRC_* below)
-//   1 = AI usage meter (Antigravity + Codex, fed by a trusted LAN bridge)
+//   1 = retired legacy AI usage value
 //   2 = retired (formerly plane radar; kept reserved for config compatibility)
 //   3 = carousel: rotate through the ticked features on a timer
+//   4 = GitHub GH//STAT
+//   5 = clock/current weather/forecast (theme selects the screen)
+//   6 = JPEG/GIF gallery
+//   7 = Codex usage
 // ---------------------------------------------------------------------------
 #define MODE_STOCKS    0
-#define MODE_USAGE     1
 #define MODE_RETIRED_RADAR 2
 #define MODE_CAROUSEL  3
 #define MODE_GITHUB    4
 #define MODE_CLOCK     5
 #define MODE_GALLERY   6
+#define MODE_CODEX     7
 #define DEFAULT_MODE MODE_STOCKS
 #define DEFAULT_CAROUSEL_SEC 30      // per-mode dwell in carousel
 
@@ -77,9 +81,6 @@
 // ---------------------------------------------------------------------------
 #ifndef WITH_TICKER
 #define WITH_TICKER 1
-#endif
-#ifndef WITH_USAGE
-#define WITH_USAGE 1
 #endif
 #ifndef WITH_GITHUB
 #define WITH_GITHUB 1
@@ -95,11 +96,6 @@
 
 #define DEFAULT_GITHUB_POLL_SEC   15
 #define DEFAULT_GITHUB_ROTATE_SEC 8
-
-// AI usage mode: once data stops arriving for this long (PC asleep, bridge
-// stopped, network down) the screen switches from the stats to the idle mascot
-// animation. Effective timeout also scales with the poll period (see main.cpp).
-#define USAGE_STALE_GRACE_MS  20000UL
 
 // ---------------------------------------------------------------------------
 // Data source (stock mode)

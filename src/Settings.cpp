@@ -134,24 +134,6 @@ void TickerSettings::fromJson(JsonObjectConst o) {
 }
 
 // ===========================================================================
-// Usage slice
-// ===========================================================================
-void UsageSettings::setDefaults() {
-  usageUrl = "";
-  pollSec = DEFAULT_POLL_SEC;
-}
-
-void UsageSettings::toJson(JsonObject o) const {
-  o["usageUrl"] = usageUrl;
-  o["pollSec"]  = pollSec;
-}
-
-void UsageSettings::fromJson(JsonObjectConst o) {
-  if (o["usageUrl"].is<const char*>()) usageUrl = o["usageUrl"].as<String>();
-  if (o["pollSec"].is<int>())          pollSec = max(10, (int)o["pollSec"]);
-}
-
-// ===========================================================================
 // GitHub dashboard slice
 // ===========================================================================
 void GithubSettings::setDefaults() {
@@ -163,21 +145,41 @@ void GithubSettings::setDefaults() {
 
 void GithubSettings::toJson(JsonObject o, bool includeSecrets) const {
   o["statusUrl"] = statusUrl;
-  o["tokenSet"] = accessToken.length() > 0;
   if (includeSecrets) o["accessToken"] = accessToken;
-  o["pollSec"] = pollSec;
+  o["accessTokenSet"] = accessToken.length() > 0;
+  o["pollSec"]   = pollSec;
   o["rotateSec"] = rotateSec;
 }
 
 void GithubSettings::fromJson(JsonObjectConst o) {
-  if (o["statusUrl"].is<const char*>()) statusUrl = o["statusUrl"].as<String>();
+  if (o["statusUrl"].is<const char*>())   statusUrl = o["statusUrl"].as<String>();
   if (o["accessToken"].is<const char*>()) {
-    String next = o["accessToken"].as<String>();
-    if (next.length()) accessToken = next; // blank keeps the stored token
+    String t = o["accessToken"].as<String>();
+    if (t.length() > 0) accessToken = t;    // blank = keep existing
   }
-  if (o["clearToken"].is<bool>() && o["clearToken"].as<bool>()) accessToken = "";
-  if (o["pollSec"].is<int>()) pollSec = constrain((int)o["pollSec"], 5, 3600);
-  if (o["rotateSec"].is<int>()) rotateSec = constrain((int)o["rotateSec"], 3, 300);
+  if (o["pollSec"].is<int>())   pollSec = max(5, (int)o["pollSec"]);
+  if (o["rotateSec"].is<int>()) rotateSec = max(2, (int)o["rotateSec"]);
+}
+
+// ===========================================================================
+// Codex AI usage tracker slice
+// ===========================================================================
+void CodexSettings::setDefaults() {
+  statusUrl = "";
+  pollSec = 30;
+  rotateSec = 8;
+}
+
+void CodexSettings::toJson(JsonObject o) const {
+  o["statusUrl"] = statusUrl;
+  o["pollSec"]   = pollSec;
+  o["rotateSec"] = rotateSec;
+}
+
+void CodexSettings::fromJson(JsonObjectConst o) {
+  if (o["statusUrl"].is<const char*>()) statusUrl = o["statusUrl"].as<String>();
+  if (o["pollSec"].is<int>())          pollSec = max(5, (int)o["pollSec"]);
+  if (o["rotateSec"].is<int>())        rotateSec = max(2, (int)o["rotateSec"]);
 }
 
 // ===========================================================================
@@ -305,7 +307,12 @@ void ClockSettings::fromJson(JsonObjectConst o) {
   if (o["format24h"].is<bool>())     format24h = o["format24h"];
   if (o["showSeconds"].is<bool>())   showSeconds = o["showSeconds"];
   if (o["showDate"].is<bool>())      showDate = o["showDate"];
-  if (o["theme"].is<int>())         theme = (uint8_t)constrain((int)o["theme"], 0, 3);
+  if (o["theme"].is<int>()) {
+    int savedTheme = o["theme"];
+    // v0.7.0 exposed five overlapping screens. Preserve the closest useful
+    // result while migrating to the three screens supported by the renderer.
+    theme = savedTheme <= 0 ? 0 : (savedTheme >= 2 ? 2 : 1);
+  }
   if (o["weatherCity"].is<const char*>())   weatherCity = o["weatherCity"].as<String>();
   if (o["weatherApiKey"].is<const char*>()) weatherApiKey = o["weatherApiKey"].as<String>();
   if (o["weatherUnits"].is<const char*>())  weatherUnits = o["weatherUnits"].as<String>();
@@ -341,7 +348,11 @@ void Settings::setDefaults() {
 
   mode = DEFAULT_MODE;
   carouselSec = DEFAULT_CAROUSEL_SEC;
-  carouselTicker = carouselUsage = carouselGithub = carouselClock = carouselGallery = true;
+  carouselTicker = carouselGithub = carouselClock = carouselGallery = carouselCodex = true;
+  carouselClockTime1 = true;
+  carouselClockTime2 = false;
+  carouselClockWeather2 = false;
+  carouselClockTime3 = carouselClockWeather1 = false;
   carouselClockDigital = true;
   carouselClockWeather = carouselClockModern = carouselClockForecast = false;
   httpTimeout = DEFAULT_HTTP_TIMEOUT;
@@ -352,10 +363,10 @@ void Settings::setDefaults() {
   rotation = 0;
 
   ticker.setDefaults();
-  usage.setDefaults();
   github.setDefaults();
   clock.setDefaults();
   gallery.setDefaults();
+  codex.setDefaults();
 }
 
 // ---------------------------------------------------------------------------
@@ -430,19 +441,25 @@ void settingsToJson(const Settings& s, JsonObject root, bool includeSecrets) {
 
   // Mode + shared HTTP/display
   root["mode"]              = (s.mode == MODE_GITHUB)   ? "github"
-                            : (s.mode == MODE_USAGE)    ? "usage"
-                            : (s.mode == MODE_CLOCK)    ? (s.clock.theme == 1 ? "clock_weather" : (s.clock.theme == 2 ? "clock_modern" : (s.clock.theme == 3 ? "clock_forecast" : "clock")))
+                            : (s.mode == MODE_CODEX)    ? "codex"
+                            : (s.mode == MODE_CLOCK)    ? (s.clock.theme == 1 ? "clock_time2" : (s.clock.theme == 2 ? "clock_weather2" : "clock"))
                             : (s.mode == MODE_GALLERY)  ? "gallery"
                             : (s.mode == MODE_CAROUSEL) ? "carousel" : "stocks";
   root["carouselSec"]       = s.carouselSec;
   root["carouselTicker"]    = s.carouselTicker;
-  root["carouselUsage"]     = s.carouselUsage;
   root["carouselGithub"]    = s.carouselGithub;
+  root["carouselCodex"]     = s.carouselCodex;
   root["carouselClock"]            = s.carouselClock;
-  root["carouselClockDigital"]     = s.carouselClockDigital;
-  root["carouselClockWeather"]     = s.carouselClockWeather;
-  root["carouselClockModern"]      = s.carouselClockModern;
-  root["carouselClockForecast"]    = s.carouselClockForecast;
+  root["carouselClockTime1"]       = s.carouselClockTime1;
+  root["carouselClockTime2"]       = s.carouselClockTime2;
+  root["carouselClockWeather2"]    = s.carouselClockWeather2;
+  // Compatibility mirrors for one downgrade window. Keep them synchronized
+  // with the canonical three-screen model so an old value cannot resurrect a
+  // disabled screen on the next save.
+  root["carouselClockDigital"]     = s.carouselClockTime1;
+  root["carouselClockWeather"]     = s.carouselClockTime2;
+  root["carouselClockModern"]      = false;
+  root["carouselClockForecast"]    = s.carouselClockWeather2;
   root["carouselGallery"]          = s.carouselGallery;
   root["httpTimeout"]       = s.httpTimeout;
   root["brightness"]        = s.brightness;
@@ -452,10 +469,10 @@ void settingsToJson(const Settings& s, JsonObject root, bool includeSecrets) {
 
   // Feature slices
   s.ticker.toJson(root["ticker"].to<JsonObject>());
-  s.usage.toJson(root["usage"].to<JsonObject>());
   s.github.toJson(root["github"].to<JsonObject>(), includeSecrets);
   s.clock.toJson(root["clock"].to<JsonObject>());
   s.gallery.toJson(root["gallery"].to<JsonObject>());
+  s.codex.toJson(root["codex"].to<JsonObject>());
 }
 
 // Apply only the keys that are present (partial update friendly). Accepts both
@@ -468,9 +485,6 @@ void settingsApplyJson(Settings& s, JsonObjectConst root) {
   }
 
   if (root["wifi"].is<JsonArrayConst>()) {
-    // The list is authoritative when present (order = try priority, missing
-    // row = deletion). A blank password keeps the stored one, matched by SSID
-    // so rows survive reordering.
     WifiCred old[MAX_WIFI_NETS];
     uint8_t oldCount = s.wifiCount;
     for (uint8_t i = 0; i < oldCount; i++) old[i] = s.wifi[i];
@@ -479,7 +493,7 @@ void settingsApplyJson(Settings& s, JsonObjectConst root) {
     for (JsonObjectConst e : root["wifi"].as<JsonArrayConst>()) {
       if (s.wifiCount >= MAX_WIFI_NETS) break;
       const char* ssid = e["ssid"] | "";
-      if (!ssid[0]) continue;                // skip blank rows
+      if (!ssid[0]) continue;
       WifiCred& dst = s.wifi[s.wifiCount];
       dst.ssid = ssid;
       const char* pass = e["pass"] | "";
@@ -490,52 +504,66 @@ void settingsApplyJson(Settings& s, JsonObjectConst root) {
       s.wifiCount++;
     }
   } else if (root["staSsid"].is<const char*>()) {
-    // Legacy single-network layout (pre-2.4 config.json or an old cached web
-    // page): it becomes/updates the primary network, extras stay untouched.
     String ssid = root["staSsid"].as<String>();
     if (ssid.length()) {
       s.wifi[0].ssid = ssid;
       if (root["staPass"].is<const char*>()) {
         String p = root["staPass"].as<String>();
-        if (p.length() > 0) s.wifi[0].pass = p;   // blank = keep
+        if (p.length() > 0) s.wifi[0].pass = p;
       }
       if (s.wifiCount < 1) s.wifiCount = 1;
     }
   }
   if (root["apSsid"].is<const char*>()) s.apSsid = root["apSsid"].as<String>();
-  // AP password: apply as-is when present (empty allowed => open AP).
   if (root["apPass"].is<const char*>()) s.apPass = root["apPass"].as<String>();
 
   if (root["mode"].is<const char*>()) {
     String m = root["mode"].as<String>();
-    if (m.equalsIgnoreCase("clock_weather")) {
+    if (m.equalsIgnoreCase("clock_time1") || m.equalsIgnoreCase("clock")) {
+      s.mode = MODE_CLOCK;
+      s.clock.theme = 0;
+    } else if (m.equalsIgnoreCase("clock_time2") || m.equalsIgnoreCase("clock_time3") ||
+               m.equalsIgnoreCase("clock_modern") || m.equalsIgnoreCase("clock_weather1") ||
+               m.equalsIgnoreCase("clock_weather")) {
       s.mode = MODE_CLOCK;
       s.clock.theme = 1;
-    } else if (m.equalsIgnoreCase("clock_modern")) {
+    } else if (m.equalsIgnoreCase("clock_weather2") || m.equalsIgnoreCase("clock_forecast")) {
       s.mode = MODE_CLOCK;
       s.clock.theme = 2;
-    } else if (m.equalsIgnoreCase("clock_forecast")) {
-      s.mode = MODE_CLOCK;
-      s.clock.theme = 3;
     } else {
       s.mode = m.equalsIgnoreCase("github")   ? MODE_GITHUB
+             : m.equalsIgnoreCase("codex")    ? MODE_CODEX
              : m.equalsIgnoreCase("radar")    ? MODE_STOCKS
-             : m.equalsIgnoreCase("usage")    ? MODE_USAGE
-             : m.equalsIgnoreCase("clock")    ? MODE_CLOCK
              : m.equalsIgnoreCase("gallery")  ? MODE_GALLERY
              : m.equalsIgnoreCase("carousel") ? MODE_CAROUSEL : MODE_STOCKS;
-      if (m.equalsIgnoreCase("clock")) s.clock.theme = 0;
     }
   }
   if (root["carouselSec"].is<int>())      s.carouselSec = constrain((int)root["carouselSec"], 5, 3600);
   if (root["carouselTicker"].is<bool>())  s.carouselTicker = root["carouselTicker"];
-  if (root["carouselUsage"].is<bool>())   s.carouselUsage = root["carouselUsage"];
   if (root["carouselGithub"].is<bool>())  s.carouselGithub = root["carouselGithub"];
-  if (root["carouselClock"].is<bool>())     s.carouselClock = root["carouselClock"];
-  if (root["carouselClockDigital"].is<bool>()) s.carouselClockDigital = root["carouselClockDigital"];
-  if (root["carouselClockWeather"].is<bool>()) s.carouselClockWeather = root["carouselClockWeather"];
-  if (root["carouselClockModern"].is<bool>())  s.carouselClockModern = root["carouselClockModern"];
-  if (root["carouselClockForecast"].is<bool>()) s.carouselClockForecast = root["carouselClockForecast"];
+  if (root["carouselCodex"].is<bool>())   s.carouselCodex = root["carouselCodex"];
+  if (root["carouselClock"].is<bool>())       s.carouselClock = root["carouselClock"];
+  if (root["carouselClockTime1"].is<bool>()) s.carouselClockTime1 = root["carouselClockTime1"];
+  if (root["carouselClockTime2"].is<bool>()) s.carouselClockTime2 = root["carouselClockTime2"];
+  if (root["carouselClockTime3"].is<bool>()) {
+    s.carouselClockTime3 = root["carouselClockTime3"];
+    if (s.carouselClockTime3) s.carouselClockTime2 = true;
+  }
+  if (root["carouselClockWeather1"].is<bool>()) {
+    s.carouselClockWeather1 = root["carouselClockWeather1"];
+    if (s.carouselClockWeather1) s.carouselClockTime2 = true;
+  }
+  if (root["carouselClockWeather2"].is<bool>()) s.carouselClockWeather2 = root["carouselClockWeather2"];
+  if (!root["carouselClockTime1"].is<bool>() && root["carouselClockDigital"].is<bool>())
+    s.carouselClockTime1 = root["carouselClockDigital"];
+  if (!root["carouselClockTime2"].is<bool>()) {
+    if (root["carouselClockWeather"].is<bool>() && root["carouselClockWeather"].as<bool>())
+      s.carouselClockTime2 = true;
+    if (root["carouselClockModern"].is<bool>() && root["carouselClockModern"].as<bool>())
+      s.carouselClockTime2 = true;
+  }
+  if (!root["carouselClockWeather2"].is<bool>() && root["carouselClockForecast"].is<bool>())
+    s.carouselClockWeather2 = root["carouselClockForecast"];
   if (root["carouselGallery"].is<bool>())   s.carouselGallery = root["carouselGallery"];
 
   if (root["httpTimeout"].is<int>())        s.httpTimeout = constrain((int)root["httpTimeout"], 1000, 20000);
@@ -544,14 +572,10 @@ void settingsApplyJson(Settings& s, JsonObjectConst root) {
   if (root["backlightInverted"].is<bool>()) s.backlightInverted = root["backlightInverted"];
   if (root["rotation"].is<int>())           s.rotation = (uint8_t)(((int)root["rotation"]) & 3);
 
-  // Feature slices: prefer the nested object; fall back to the top level so a
-  // legacy flat config.json (or a legacy POST) still applies. The old shared
-  // "pollSec" thus seeds both ticker and usage cadence on first upgrade.
   JsonObjectConst t = root["ticker"].is<JsonObjectConst>() ? root["ticker"].as<JsonObjectConst>() : root;
   s.ticker.fromJson(t);
-  JsonObjectConst u = root["usage"].is<JsonObjectConst>() ? root["usage"].as<JsonObjectConst>() : root;
-  s.usage.fromJson(u);
   if (root["github"].is<JsonObjectConst>())  s.github.fromJson(root["github"].as<JsonObjectConst>());
   if (root["clock"].is<JsonObjectConst>())   s.clock.fromJson(root["clock"].as<JsonObjectConst>());
   if (root["gallery"].is<JsonObjectConst>()) s.gallery.fromJson(root["gallery"].as<JsonObjectConst>());
+  if (root["codex"].is<JsonObjectConst>())   s.codex.fromJson(root["codex"].as<JsonObjectConst>());
 }

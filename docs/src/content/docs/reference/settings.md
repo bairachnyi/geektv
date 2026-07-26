@@ -4,7 +4,8 @@ description: Полный справочник вкладок, полей, кн�
 ---
 
 Веб-интерфейс доступен по IP устройства, например
-`http://192.168.1.141/`, или по mDNS-имени `http://<hostname>.local`.
+`http://192.168.1.50/` (вымышленный адрес), или по mDNS-имени
+`http://<hostname>.local`.
 Основная кнопка **Save settings** сохраняет все обычные вкладки. Некоторые
 действия — Wi-Fi, bridge, OTA и import — имеют отдельные кнопки.
 
@@ -63,7 +64,11 @@ AP включается, если Wi-Fi не настроен или подкл�
 **What this device shows** выбирает единственный активный экран:
 
 - Stock / crypto ticker;
-- AI usage (Antigravity + Codex);
+- Clock — большие часы;
+- Clock + weather — часы и текущая погода;
+- Weather — прогноз на три дня;
+- Gallery;
+- Codex usage;
 - GitHub deploys;
 - Carousel.
 
@@ -136,28 +141,50 @@ portfolio summary.
 Максимум восемь tickers. **cash.ch symbol finder** принимает URL, ISIN, valor
 или текстовое имя и добавляет выбранный listing key.
 
-## AI Usage
+## Clock & Weather
 
-- **AI Usage bridge URL** — pull endpoint trusted LAN bridge, например
-  `http://<PC-LAN-IP>:8788/api/ai-usage`.
-- **Refresh data** — минимум 10 секунд.
+Вкладка содержит три экрана, и те же три варианта доступны в Display/Carousel:
 
-В pull mode SmallTV запрашивает bridge. В push mode URL оставляют пустым, а
-bridge отправляет compact JSON в `POST /api/ai-usage`. На ESP не хранятся
-provider credentials. Автоматические личные лимиты Antigravity и Codex пока
-зависят от локального adapter: публичных personal-quota API у этих приложений нет.
+1. **Большие часы** — время, текущая дата, день недели и IP внизу.
+2. **Часы + погода** — время, IP, location, текущая температура, влажность,
+   weather mark, дата и день недели.
+3. **Прогноз** — три секции: сегодня, завтра и послезавтра.
 
-## Совместимость с factory V9.0.51
+**Location** передаётся в `wttr.in`; API key не нужен. **Timezone** задаёт
+локальное время и дату. Виртуальный дисплей использует те же настройки и близкую
+палитру, но не гарантирует идентичную растеризацию bitmap-шрифтов на физической
+панели. Weather refresh ограничен минимумом в 60 секунд, чтобы не создавать
+лишний сетевой трафик.
 
-Локальная candidate UI явно показывает состояние трёх заводских групп:
+## Gallery
 
-- Clock themes — ещё не перенесены;
-- Weather / forecast — ещё не перенесены;
-- Photo gallery — ещё не перенесена.
+- **Show each image** — длительность JPEG или одного цикла показа GIF;
+- **Fit mode** — crop/contain для JPEG;
+- upload принимает JPEG и анимированный GIF;
+- рекомендуемый размер — 240×240, максимальный файл — 600 KB.
 
-Пока эти пункты не реализованы и не протестированы, candidate нельзя прошивать
-как полную замену factory firmware. Plane Radar удалён из firmware, settings,
-carousel и документации.
+Файлы хранятся в LittleFS. GIF декодируется кадр за кадром непосредственно на
+дисплей, поэтому не требует буфера на весь animation. Неподдерживаемый формат,
+переполнение flash или слишком большой файл возвращают понятную ошибку upload.
+
+## Codex
+
+- **Codex bridge URL** — HTTP endpoint в доверенной локальной сети;
+- **Refresh** — период pull-запроса;
+- если URL пуст, bridge может отправлять данные в `POST /api/codex`.
+
+Экран показывает до трёх страниц: overview, модели и context window. При
+временной ошибке последние корректные данные сохраняются и помечаются
+`WARN`/`STALE`; выдуманные model/token значения не подставляются. Текст ошибки и
+код доступны на вкладке Status.
+
+## Покрытие factory-функций
+
+В firmware 0.8.3 реализованы часы, текущая погода, прогноз на три дня, JPEG/GIF
+gallery, GitHub и Codex. Plane Radar и прежний общий AI Usage удалены. Это
+самостоятельная replacement firmware, поэтому перед OTA всё равно необходимо
+проверить конкретную ревизию дисплея, rotation, backlight polarity и свободную
+память на физическом SmallTV-Ultra.
 
 ## GitHub
 

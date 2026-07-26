@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
-const base = new URL(process.argv[2] || 'http://192.168.1.141/');
+const base = new URL(process.argv[2] || 'http://192.168.1.50/');
 if (!['http:', 'https:'].includes(base.protocol)) throw new Error('Expected an http(s) device URL.');
 
 const output = resolve(process.argv[3] || 'research/stock-v9.0.51/raw');
