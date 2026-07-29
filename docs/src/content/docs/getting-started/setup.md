@@ -16,7 +16,7 @@ The ESP8266 is 2.4 GHz only. For an AP password use at least 8 characters, or le
 
 ## Add something to show
 
-Open the **Ticker** tab and add a few tickers, for example `AAPL`, `NESN.SW`, or `BTC-USD`. Each ticker picks its own data source; the default is Yahoo Finance, so prices appear within a few seconds with no server to set up. Swiss instruments Yahoo lacks can use cash.ch, and a custom webhook lets you own the source. See [Data sources](/smalltv-ultra/reference/data-sources/) for the full list of what works.
+Open the **Ticker** tab and add a few tickers, for example `AAPL`, `NESN.SW`, or `BTC-USD`. Each ticker picks its own data source; the default is Yahoo Finance, so prices appear within a few seconds with no server to set up. Swiss instruments Yahoo lacks can use cash.ch, and a custom webhook lets you own the source. See [Data sources](/geektv/reference/data-sources/) for the full list of what works.
 
 ## Web UI reference
 
@@ -55,8 +55,8 @@ Check for and install the newest GitHub release (every board fetches its own ima
 
 Each mode has its own page:
 
-- [Stock and crypto ticker](/smalltv-ultra/features/ticker/)
-- [Clock and weather](/smalltv-ultra/features/clock-weather/)
-- [Gallery](/smalltv-ultra/features/gallery/)
-- [Codex usage](/smalltv-ultra/features/codex/)
-- [GitHub GH//STAT](/smalltv-ultra/features/github/)
+- [Stock and crypto ticker](/geektv/features/ticker/)
+- [Clock and weather](/geektv/features/clock-weather/)
+- [Gallery](/geektv/features/gallery/)
+- [Codex usage](/geektv/features/codex/)
+- [GitHub GH//STAT](/geektv/features/github/)

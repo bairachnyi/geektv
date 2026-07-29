@@ -189,7 +189,7 @@ gallery, GitHub и Codex. Plane Radar и прежний общий AI Usage уд
 ## GitHub
 
 Полное объяснение `GH//STAT`, токенов, каждого поля и ошибок находится в разделе
-[GitHub GH//STAT](/smalltv-ultra/features/github/).
+[GitHub GH//STAT](/geektv/features/github/).
 
 Кратко: ESP8266 хранит feed URL, poll/rotation interval и необязательный device
 token. GitHub owners, repositories и fine-grained PAT настраиваются браузером

@@ -169,7 +169,7 @@ unknown path в AP mode перенаправляются на `http://192.168.4.
 ### `GET /api/github`
 
 Возвращает нормализованную ленту v0.3. Детальный schema описан в
-[GitHub GH//STAT](/smalltv-ultra/features/github/#формат-ленты-v03).
+[GitHub GH//STAT](/geektv/features/github/#формат-ленты-v03).
 
 ### `GET /api/config`
 

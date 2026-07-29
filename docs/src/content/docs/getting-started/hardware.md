@@ -17,15 +17,15 @@ Look at the board through the case vents, or open it (four clips, no glue).
 
 The two chips on the ESP32-C2 board are the giveaway. The main SoC is marked `ESP8684`, and the small 16-pin chip by the USB-C port is the `CH340C`.
 
-![The ESP8684 (ESP32-C2) main chip on the ESP32-C2 board](/smalltv-ultra/assets/board-c2-esp8684.jpg)
+![The ESP8684 (ESP32-C2) main chip on the ESP32-C2 board](/geektv/assets/board-c2-esp8684.jpg)
 
-![The CH340C USB-serial chip next to the USB-C port](/smalltv-ultra/assets/board-c2-ch340c.jpg)
+![The CH340C USB-serial chip next to the USB-C port](/geektv/assets/board-c2-ch340c.jpg)
 
 ## SmallTV (ESP8266)
 
-![The SmallTV (ESP8266)](/smalltv-ultra/assets/product-8266.png)
+![The SmallTV (ESP8266)](/geektv/assets/product-8266.png)
 
-The "Ultra" units (branded Ultra-Vx.x.x) are this same ESP-12F board, just with different stock firmware and a different flash layout. They run this firmware fine, but the first install needs the loader step in [Flashing](/smalltv-ultra/getting-started/flashing/#smalltv-ultra-stock-updater-says-not-enough-space).
+The "Ultra" units (branded Ultra-Vx.x.x) are this same ESP-12F board, just with different stock firmware and a different flash layout. They run this firmware fine, but the first install needs the loader step in [Flashing](/geektv/getting-started/flashing/#smalltv-ultra-stock-updater-says-not-enough-space).
 
 Product photos show each unit running its stock firmware, not this one, and the on-screen style varies by model and firmware version (a weather clock, a ticker, and so on). Match your device's screen and the tell-tale signs to identify the model before picking a binary.
 
@@ -52,7 +52,7 @@ Hardware SPI on the ESP8266 uses fixed clock and data pins. The rest are the Sma
 
 ## SmallTV (ESP32-C2 / ESP8684)
 
-![The SmallTV (ESP32-C2)](/smalltv-ultra/assets/product-c2.png)
+![The SmallTV (ESP32-C2)](/geektv/assets/product-c2.png)
 
 | | |
 |---|---|
@@ -81,7 +81,7 @@ The pins are set in `src/board_esp32c2.h`. Two panel quirks are worth knowing: t
 
 ## NM-TV-154 (classic ESP32)
 
-![The NM-TV-154 running its stock NMMiner firmware](/smalltv-ultra/assets/product-esp32.png)
+![The NM-TV-154 running its stock NMMiner firmware](/geektv/assets/product-esp32.png)
 
 | | |
 |---|---|

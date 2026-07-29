@@ -27,7 +27,7 @@ Add up to 8 tickers in the **Ticker** tab. Each row has a symbol, an optional na
 | Crypto | `BTC-USD`, `ETH-EUR` |
 | FX | `EURUSD=X`, `EURCHF=X` |
 
-With the cash.ch source the `symbol` field takes a cash.ch listing key instead (`valor-marketId-currencyId`, e.g. `147478611-246-333`), which covers Swiss structured products and AMCs that Yahoo does not list. The built-in finder in the Ticker tab turns a cash.ch link, ISIN, or name into the key; [Data sources](/smalltv-ultra/reference/data-sources/) has the details.
+With the cash.ch source the `symbol` field takes a cash.ch listing key instead (`valor-marketId-currencyId`, e.g. `147478611-246-333`), which covers Swiss structured products and AMCs that Yahoo does not list. The built-in finder in the Ticker tab turns a cash.ch link, ISIN, or name into the key; [Data sources](/geektv/reference/data-sources/) has the details.
 
 ## Positions and the portfolio page
 
@@ -37,4 +37,4 @@ Give a ticker a `qty` and a per-unit `cost` and it becomes a position: its page 
 
 Two intervals control the display: how often each symbol is shown (rotation) and how often data is refreshed (poll). Both are set in the Display tab. The default poll of 120 seconds is fine for 8 symbols.
 
-Where the prices come from is chosen per ticker. By default a ticker fetches Yahoo Finance directly over HTTPS with no backend; cash.ch works the same way for Swiss instruments, GitHub is a serverless cash.ch proxy that needs nothing of yours running, and a webhook ticker calls your own endpoint. All four are covered in [Data sources](/smalltv-ultra/reference/data-sources/).
+Where the prices come from is chosen per ticker. By default a ticker fetches Yahoo Finance directly over HTTPS with no backend; cash.ch works the same way for Swiss instruments, GitHub is a serverless cash.ch proxy that needs nothing of yours running, and a webhook ticker calls your own endpoint. All four are covered in [Data sources](/geektv/reference/data-sources/).

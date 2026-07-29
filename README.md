@@ -1,4 +1,20 @@
-# GeekTV — open firmware for GeekMagic SmallTV
+<p align="center">
+  <img src="docs/src/assets/logo.svg" width="112" alt="GeekTV logo">
+</p>
+
+<h1 align="center">GeekTV</h1>
+
+<p align="center">
+  Open firmware for GeekMagic SmallTV — clocks, weather, gallery, market
+  tickers, GitHub CI/CD status, Codex usage, web settings and OTA updates.
+</p>
+
+<p align="center">
+  <a href="https://github.com/bairachnyi/geektv/actions/workflows/build.yml"><img alt="Build firmware" src="https://github.com/bairachnyi/geektv/actions/workflows/build.yml/badge.svg"></a>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg"></a>
+  <img alt="Display: 240×240" src="https://img.shields.io/badge/display-240%C3%97240-00bcd4">
+  <img alt="ESP8266 and ESP32" src="https://img.shields.io/badge/chips-ESP8266%20%7C%20ESP32-6c63ff">
+</p>
 
 GeekTV is free, open-source firmware for 240×240 GeekMagic SmallTV-style
 displays. It turns the device into a configurable desk dashboard with clocks,
@@ -6,8 +22,19 @@ weather, a photo/GIF gallery, stock and crypto prices, Codex usage, and a
 GitHub CI/CD status screen. Configuration, image upload, diagnostics, backup,
 and OTA updates are available from the built-in web interface.
 
-[![Build firmware](https://github.com/bairachnyi/geektv/actions/workflows/build.yml/badge.svg)](https://github.com/bairachnyi/geektv/actions/workflows/build.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+> **Project status:** actively developed. The current firmware line is `0.8.x`.
+> Always match the binary to the device chip before flashing.
+
+## Start here
+
+| I want to… | Go to |
+| --- | --- |
+| Download firmware | [Releases](https://github.com/bairachnyi/geektv/releases) or the latest [build artifact](https://github.com/bairachnyi/geektv/actions/workflows/build.yml) |
+| Install it safely | [Flashing guide](docs/src/content/docs/getting-started/flashing.md) |
+| Configure the device | [First setup](docs/src/content/docs/getting-started/setup.md) and [all settings](docs/src/content/docs/reference/settings.md) |
+| Test without hardware | [Local emulator](#local-emulator) |
+| Track GitHub projects | [GH//STAT guide](docs/src/content/docs/features/github.md) |
+| Report a problem or contribute | [Contributing guide](CONTRIBUTING.md) |
 
 ## Features
 

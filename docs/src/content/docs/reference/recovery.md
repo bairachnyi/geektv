@@ -7,7 +7,7 @@ description: Going back to stock, known limitations, and credits.
 
 Keep a `stock-backup.bin` from before your first flash and you can always return the device to factory.
 
-- **Re-flash anything** (your stock backup or this firmware) with the method for your board, described in [Flashing](/smalltv-ultra/getting-started/flashing/).
+- **Re-flash anything** (your stock backup or this firmware) with the method for your board, described in [Flashing](/geektv/getting-started/flashing/).
 - **Factory reset** in the Update tab wipes saved settings and restarts in SETUP MODE. It does not change the firmware.
 - On the ESP32 boards (C2 and NM-TV-154), a bad flash never bricks the device: it still enters download mode over USB, so esptool can rewrite it.
 
@@ -16,7 +16,7 @@ Keep a `stock-backup.bin` from before your first flash and you can always return
 - 2.4 GHz WiFi only. WPA2. For an AP password use at least 8 characters, or leave it blank for an open hotspot.
 - The web server is single-threaded, so the UI may pause briefly during a data poll.
 - HTTPS works on the ESP8266 but is RAM-tight. Prefer plain HTTP on your LAN for a webhook if you see instability. The ESP32 boards have more headroom.
-- The GitHub self-update works on every board from 2.7.0. The ESP32 boards download in place; the ESP8266 updates at boot (two reboots — see [Flashing](/smalltv-ultra/getting-started/flashing/#after-the-first-flash)). ESP8266 devices still on 2.6.1 or older have a broken updater and need one manual upload in the Update tab to get current.
+- The GitHub self-update works on every board from 2.7.0. The ESP32 boards download in place; the ESP8266 updates at boot (two reboots — see [Flashing](/geektv/getting-started/flashing/#after-the-first-flash)). ESP8266 devices still on 2.6.1 or older have a broken updater and need one manual upload in the Update tab to get current.
 - Firmware uses bundled GFX bitmap fonts; the emulator uses the matching family,
   size, coordinates and palette. Browser anti-aliasing can still differ by a few
   edge pixels from ST7789 glyph rasterization.

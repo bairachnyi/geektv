@@ -5,7 +5,7 @@ description: How to install SmallTV Ultra firmware on each board, back up the st
 
 Flash the method that matches your board. The ESP8266 installs over the air from its stock web UI. The ESP32-C2 and the NM-TV-154 install over the USB cable with esptool. Back up the stock image first on any board so you can always go back.
 
-Get the firmware image from the [Actions tab](https://github.com/bairachnyi/geektv/actions) (latest `build` run) or the [Releases page](https://github.com/bairachnyi/geektv/releases), or [build it yourself](/smalltv-ultra/reference/building/).
+Get the firmware image from the [Actions tab](https://github.com/bairachnyi/geektv/actions) (latest `build` run) or the [Releases page](https://github.com/bairachnyi/geektv/releases), or [build it yourself](/geektv/reference/building/).
 
 ## SmallTV (ESP8266)
 

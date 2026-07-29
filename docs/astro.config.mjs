@@ -1,10 +1,10 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 
-// Public project documentation deployment.
+// Optional local/static documentation build.
 export default defineConfig({
   site: 'https://bairachnyi.github.io',
-  base: '/smalltv-ultra',
+  base: '/geektv',
   integrations: [
     starlight({
       title: 'GeekTV',

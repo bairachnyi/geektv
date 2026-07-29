@@ -169,7 +169,7 @@ Credentials используются только polling/reconciliation.
 - считает данные stale после `pollSec × 3 + 10` секунд без успеха;
 - показывает отдельный error screen вместо неоднозначного пустого экрана.
 
-Полная пользовательская документация — [GitHub GH//STAT](/smalltv-ultra/features/github/).
+Полная пользовательская документация — [GitHub GH//STAT](/geektv/features/github/).
 
 ## Web UI
 
