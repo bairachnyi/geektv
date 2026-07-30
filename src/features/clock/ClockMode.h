@@ -18,6 +18,7 @@ struct WeatherData {
   bool     valid = false;
   float    temp = 0.0f;
   uint8_t  humidity = 0;
+  float    windKph = 0.0f;
   uint16_t weatherCode = 0;
   String   description;
   String   city;
@@ -39,9 +40,11 @@ public:
   const WeatherData& weather() const { return m_weather; }
 
 private:
-  void fetchWeather(const Settings& s);
+  bool fetchWeather(const Settings& s);
   void render(const Settings& s);
   void renderTimeOnly(const Settings& s, const struct tm& t);
+  void renderInfoLine(const Settings& s);
+  void renderGithubSummary(const Settings& s);
 
   WeatherData m_weather;
   uint32_t    m_nextFetchMs = 0;
@@ -50,6 +53,11 @@ private:
   uint8_t     m_lastTheme = 0xFF;
   char        m_lastTime[16] = "";
   bool        m_fullRepaint = true;
+  uint8_t     m_infoPage = 0;
+  uint32_t    m_nextInfoPageMs = 0;
+  uint32_t    m_lastGithubRevision = UINT32_MAX;
+  uint32_t    m_nextGithubFrameMs = 0;
+  uint16_t    m_githubFrame = 0;
 };
 
 extern ClockMode g_clockMode;

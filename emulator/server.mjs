@@ -162,14 +162,17 @@ const DEVICE_PREVIEW_JS = String.raw`
    var ac=(document.getElementById('accentColor')||{}).value||'#58a9ff';
    if(theme===0){
     return '<div class="pv-frame" style="background:#000;padding:6px;display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box">'+
-     '<div style="background:#081421;border:1px solid '+dc+';border-radius:10px;height:44px;display:flex;align-items:center;justify-content:center">'+
+     '<div style="height:44px;display:flex;align-items:center;justify-content:center">'+
       '<b style="font-family:Montserrat,sans-serif;font-size:18px;color:'+dc+'">MON, 25 JUL 2026</b>'+
      '</div>'+
-     '<div style="background:#081018;border:1px solid '+tc+';border-radius:12px;height:120px;display:flex;align-items:center;justify-content:center">'+
+     '<div style="height:120px;display:flex;align-items:center;justify-content:center">'+
       '<b style="font-family:Montserrat,sans-serif;font-size:54px;color:'+tc+';line-height:1">14:35</b>'+
      '</div>'+
-     '<div style="background:#081421;border:1px solid '+ac+';border-radius:10px;height:52px;display:flex;align-items:center;justify-content:center">'+
-      '<b style="font-family:Montserrat,sans-serif;font-size:18px;color:'+ac+'">IP: 192.168.1.50</b>'+
+     '<div style="background:#000;height:52px;display:flex;align-items:center;position:relative;overflow:hidden">'+
+      '<b style="font-family:ui-monospace,monospace;font-size:16px;color:'+ac+';margin-left:4px">192.168.1.50</b>'+
+      '<span style="position:absolute;right:2px;bottom:1px;width:122px;color:#fff;font:14px ui-monospace,monospace;line-height:23px">'+
+       '<span style="display:block"><i style="color:#59ef9a;font-style:normal">✓</i> geektv</span><span style="display:block"><i style="color:#39e7ff;font-style:normal">◌</i> dashboard</span>'+
+      '</span>'+
      '</div>'+
     '</div>';
    }
@@ -681,7 +684,7 @@ function tokenForRepo(repo) {
 
 async function discoverRepos() {
   if (bridgeConfig.repositories.length) return bridgeConfig.repositories;
-  const found = [];
+  const byOwner = [];
   for (const account of bridgeConfig.accounts) {
     let repos;
     const token = account.token || bridgeConfig.accounts.find(a => a.token)?.token || '';
@@ -692,16 +695,29 @@ async function discoverRepos() {
       try { repos = await gh(`/orgs/${account.owner}/repos?type=all&sort=pushed&per_page=100`, token); }
       catch { repos = await gh(`/users/${account.owner}/repos?sort=pushed&per_page=100`, token); }
     }
-    found.push(...repos.filter(r => !r.archived).map(r => r.full_name));
+    byOwner.push(repos.filter(r => !r.archived).map(r => r.full_name));
   }
-  return [...new Set(found)].slice(0, 12);
+  // Keep automatic discovery fair: one owner with many repositories must not
+  // consume the whole polling budget before the next configured owner.
+  const found = [];
+  for (let index = 0; found.length < 24; index++) {
+    let added = false;
+    for (const repos of byOwner) {
+      if (index >= repos.length) continue;
+      found.push(repos[index]);
+      added = true;
+      if (found.length >= 24) break;
+    }
+    if (!added) break;
+  }
+  return [...new Set(found)];
 }
 
 function estimateGithubLoad() {
   if (bridgeConfig.delivery === 'webhook') {
     return { repoCount: 0, requestsPerRefresh: 0, recommendedCacheSec: 0, effectiveCacheSec: 0 };
   }
-  const repoCount = bridgeConfig.repositories.length || 12;
+  const repoCount = bridgeConfig.repositories.length || 24;
   const perRepo =
     (bridgeConfig.events.actions ? 1 : 0)
     + (bridgeConfig.events.deployments ? 2 : 0)
@@ -778,9 +794,9 @@ async function refreshLiveData() {
   return cache.data;
 }
 
-async function liveData() {
+async function liveData(forceRefresh = false) {
   const effectiveCacheSec = estimateGithubLoad().effectiveCacheSec;
-  if (Date.now() - cache.at < effectiveCacheSec * 1000 && cache.data) return cache.data;
+  if (!forceRefresh && Date.now() - cache.at < effectiveCacheSec * 1000 && cache.data) return cache.data;
   if (githubBlockedUntil > Date.now() && cache.data) return cache.data;
   if (githubBlockedUntil > Date.now()) {
     return {
@@ -800,7 +816,10 @@ async function liveData() {
       warnings: [],
     };
   }
-  if (livePromise) return livePromise;
+  // Never make the ESP8266 wait for a long multi-repository refresh. While a
+  // background refresh is running, serve the last complete snapshot instantly.
+  if (livePromise) return cache.data || livePromise;
+  if (forceRefresh) cache.at = 0;
   livePromise = refreshLiveData().catch(error => {
     if (cache.data) {
       cache.data.warnings = [{ code: error.code || 'GITHUB_ERROR', message: error.message, source: 'github' }];
@@ -828,6 +847,20 @@ async function liveData() {
   }).finally(() => { livePromise = null; });
   return livePromise;
 }
+
+// Refresh before expiry so the device's short HTTP timeout never lands on the
+// expensive GitHub collection path. A stale-but-complete snapshot remains
+// available throughout the refresh.
+setInterval(() => {
+  if (bridgeConfig.mode !== 'live' || bridgeConfig.delivery !== 'polling' || livePromise) return;
+  const effectiveCacheMs = estimateGithubLoad().effectiveCacheSec * 1000;
+  if (!cache.data || Date.now() - cache.at >= effectiveCacheMs * 0.75) {
+    liveData(true).catch(error => record('error', 'github.background.failed', {
+      code: error.code || 'GITHUB_ERROR',
+      message: error.message,
+    }));
+  }
+}, 10000);
 
 function completedState(state) {
   return ['success', 'failure', 'error', 'inactive', 'cancelled'].includes(state) ? 'completed' : state;
@@ -968,8 +1001,15 @@ el('feedUrl').textContent='configured in device settings';loadConfig();loadDevic
 }
 
 function json(res, status, value) {
-  res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' });
-  res.end(JSON.stringify(value));
+  const body = JSON.stringify(value);
+  res.writeHead(status, {
+    'Content-Type': 'application/json',
+    'Content-Length': Buffer.byteLength(body),
+    'Cache-Control': 'no-store',
+    'Access-Control-Allow-Origin': '*',
+    'Connection': 'close',
+  });
+  res.end(body);
 }
 
 async function readBody(req) {
@@ -1051,7 +1091,26 @@ const server = http.createServer(async (req, res) => {
       const data = bridgeConfig.mode === 'live'
         ? (bridgeConfig.delivery === 'webhook' ? webhookData() : await liveData())
         : mockResponse();
-      return json(res, 200, refreshAges(data));
+      const refreshed = refreshAges(data);
+      const sourceItems = Array.isArray(refreshed.items) ? refreshed.items
+        : (Array.isArray(refreshed.runs) ? refreshed.runs : null);
+      const deviceData = sourceItems ? {
+        ok: refreshed.ok !== false,
+        message: refreshed.message || '',
+        items: sourceItems.slice(0, 6).map((item) => ({
+          repo: item.repo || '',
+          type: item.type || 'action',
+          workflow: item.workflow || '',
+          branch: item.branch || '',
+          status: item.status || '',
+          conclusion: item.conclusion || '',
+          age: Number(item.age || 0),
+          when: item.when || '',
+          latest: Boolean(item.latest),
+        })),
+      } : refreshed;
+      if (refreshed.error) deviceData.error = refreshed.error;
+      return json(res, 200, deviceData);
     }
     if (req.method === 'GET' && req.url === '/api/config') return json(res, 200, publicConfig());
     if (req.method === 'POST' && req.url === '/api/config') {

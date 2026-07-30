@@ -53,7 +53,7 @@
 #define MAX_NAME_LEN     20    // friendly name shown on screen
 #define MAX_SPARK_POINTS 60    // sparkline samples kept per symbol
 #define MAX_URL_LEN     200    // webhook base URL
-#define MAX_GITHUB_RUNS  16    // active/recent GitHub events kept in RAM and paged two at a time
+#define MAX_GITHUB_RUNS  6     // last six events; keeps enough heap for JSON parsing on ESP8266
 
 // ---------------------------------------------------------------------------
 // Display mode — what the device shows

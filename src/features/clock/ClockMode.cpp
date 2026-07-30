@@ -4,6 +4,7 @@
 #include "Clock.h"
 #include "Platform.h"
 #include "MontserratBold.h"
+#include "GithubClient.h"
 #include <ArduinoJson.h>
 #include <Arduino_GFX_Library.h>
 
@@ -16,6 +17,9 @@ static const uint16_t UI_PANEL_BLUE = 0x08A4; // #081420
 static const uint16_t UI_BORDER     = 0x2147; // #212838
 static const uint16_t UI_WHITE      = 0xFFFF;
 static const uint16_t UI_MUTED      = 0x8410;
+static const uint16_t UI_GREEN      = 0x47E8;
+static const uint16_t UI_RED        = 0xF800;
+static const uint16_t UI_YELLOW     = 0xFFE0;
 
 static void drawFontCentered(const char* txt, int yCenter, const GFXfont* font, uint16_t color) {
   Arduino_GFX* g = gfxDev();
@@ -29,6 +33,76 @@ static void drawFontCentered(const char* txt, int yCenter, const GFXfont* font, 
   int baseline = yCenter - ((int)y1 + (int)h / 2);
   g->setCursor(x, baseline);
   g->print(txt);
+}
+
+static void drawClockFontInReservedArea(const char* text, int yCenter, uint16_t color) {
+  Arduino_GFX* g = gfxDev();
+  if (!g || !text || !text[0]) return;
+  const GFXfont* font = &MontserratBold18pt7b;
+  g->setFont(font);
+  g->setTextColor(color);
+  int16_t x1 = 0, y1 = 0;
+  uint16_t w = 0, h = 0;
+  g->getTextBounds((char*)text, 0, 0, &x1, &y1, &w, &h);
+  // The visible glyphs are centered inside x=8..164. The independent seconds
+  // area starts at x=177, so even the widest HH:MM cannot overlap it.
+  int visibleX = 8 + max(0, (156 - (int)w) / 2);
+  int cursorX = visibleX - x1;
+  int baseline = yCenter - ((int)y1 + (int)h / 2);
+  g->setCursor(cursorX, baseline);
+  g->print(text);
+}
+
+static const char* compactRepo(const char* repo) {
+  if (!repo) return "";
+  const char* slash = strrchr(repo, '/');
+  return slash && slash[1] ? slash + 1 : repo;
+}
+
+static void clockMarquee(const char* source, char* out, size_t outLen,
+                         uint8_t visible, uint16_t frame) {
+  if (!source) source = "";
+  size_t len = strlen(source);
+  if (len <= visible) { strlcpy(out, source, outLen); return; }
+  const uint8_t gap = 3;
+  size_t period = len + gap;
+  size_t start = (frame / 2) % period;
+  uint8_t count = min<uint8_t>(visible, outLen - 1);
+  for (uint8_t i = 0; i < count; i++) {
+    size_t at = (start + i) % period;
+    out[i] = at < len ? source[at] : ' ';
+  }
+  out[count] = '\0';
+}
+
+static uint16_t githubStateColor(uint8_t state) {
+  if (state == GH_SUCCESS) return 0x47E8;
+  if (state == GH_FAILURE) return 0xF800;
+  if (state == GH_RUNNING) return 0x07FF;
+  if (state == GH_QUEUED) return 0xFD20;
+  return UI_MUTED;
+}
+
+static void drawCompactGithubIcon(Arduino_GFX* g, int x, int y, const GithubRun& run) {
+  uint16_t color = githubStateColor(run.state);
+  if (run.type == GH_EVENT_PULL_REQUEST) {
+    g->fillCircle(x - 3, y - 5, 2, color);
+    g->fillCircle(x - 3, y + 5, 2, color);
+    g->fillCircle(x + 4, y - 5, 2, color);
+    g->drawFastVLine(x - 3, y - 3, 6, color);
+    g->drawLine(x - 1, y + 2, x + 4, y - 3, color);
+  } else if (run.state == GH_SUCCESS) {
+    g->drawLine(x - 5, y, x - 1, y + 4, color);
+    g->drawLine(x - 1, y + 4, x + 6, y - 5, color);
+  } else if (run.state == GH_FAILURE) {
+    g->drawLine(x - 5, y - 5, x + 5, y + 5, color);
+    g->drawLine(x + 5, y - 5, x - 5, y + 5, color);
+  } else if (run.state == GH_RUNNING || run.state == GH_QUEUED) {
+    g->drawCircle(x, y, 6, color);
+    g->fillTriangle(x - 2, y - 4, x - 2, y + 4, x + 4, y, color);
+  } else {
+    g->drawCircle(x, y, 5, color);
+  }
 }
 
 static void fitUpper(String value, char* out, size_t outLen, size_t maxChars) {
@@ -78,6 +152,22 @@ static void drawWeatherMark(int cx, int cy, uint16_t code, uint16_t color) {
   g->print(kind);
 }
 
+static void drawThermometer(int x, int y, uint16_t color) {
+  Arduino_GFX* g = gfxDev();
+  if (!g) return;
+  g->drawRoundRect(x + 4, y, 7, 18, 3, color);
+  g->fillCircle(x + 7, y + 19, 6, color);
+  g->drawFastVLine(x + 7, y + 5, 12, color);
+}
+
+static void drawDroplet(int x, int y, uint16_t color) {
+  Arduino_GFX* g = gfxDev();
+  if (!g) return;
+  g->drawLine(x + 8, y, x + 1, y + 12, color);
+  g->drawLine(x + 8, y, x + 15, y + 12, color);
+  g->drawCircle(x + 8, y + 13, 7, color);
+}
+
 static void dateLabel(const String& iso, uint8_t index, char* out, size_t outLen) {
   if (index == 0) { strlcpy(out, "TODAY", outLen); return; }
   if (index == 1) { strlcpy(out, "TOMORROW", outLen); return; }
@@ -97,6 +187,11 @@ void ClockMode::begin(const Settings&) {
   m_lastTheme = 0xFF;
   m_lastTime[0] = '\0';
   m_fullRepaint = true;
+  m_infoPage = 0;
+  m_nextInfoPageMs = 0;
+  m_lastGithubRevision = UINT32_MAX;
+  m_nextGithubFrameMs = 0;
+  m_githubFrame = 0;
 }
 
 void ClockMode::invalidate(const Settings& s) {
@@ -106,6 +201,11 @@ void ClockMode::invalidate(const Settings& s) {
   m_lastTheme = 0xFF;
   m_lastTime[0] = '\0';
   m_fullRepaint = true;
+  m_infoPage = 0;
+  m_nextInfoPageMs = 0;
+  m_lastGithubRevision = UINT32_MAX;
+  m_nextGithubFrameMs = 0;
+  m_githubFrame = 0;
   render(s);
 }
 
@@ -115,44 +215,65 @@ void ClockMode::wake(const Settings& s) {
   m_lastTheme = 0xFF;
   m_lastTime[0] = '\0';
   m_fullRepaint = true;
+  m_infoPage = 0;
+  m_nextInfoPageMs = 0;
+  m_lastGithubRevision = UINT32_MAX;
+  m_nextGithubFrameMs = 0;
+  m_githubFrame = 0;
   render(s);
 }
 
-void ClockMode::fetchWeather(const Settings& s) {
+bool ClockMode::fetchWeather(const Settings& s) {
   if (WiFi.status() != WL_CONNECTED) {
     m_weather.error = "Wi-Fi offline";
-    return;
+    return false;
   }
 
   String city = s.clock.weatherCity.length() ? s.clock.weatherCity : "Moscow";
   city.replace(" ", "+");
+  // Weather is public, non-sensitive data. On the ESP8266, avoiding TLS saves
+  // enough contiguous heap for the filtered JSON parser while the other
+  // dashboard features remain compiled in. ESP32 targets retain HTTPS.
+#if defined(SMALLTV_ESP8266)
+  String url = "http://wttr.in/" + city + "?format=j1";
+  const uint32_t minHeap = 7500;
+  const uint32_t minBlock = 4500;
+#else
   String url = "https://wttr.in/" + city + "?format=j1";
+  const uint32_t minHeap = 17000;
+  const uint32_t minBlock = 9000;
+#endif
 
-  if (ESP.getFreeHeap() < 17000) {
+  if (ESP.getFreeHeap() < minHeap || platformMaxFreeBlock() < minBlock) {
     m_weather.error = "Low memory";
-    return;
+    return false;
   }
+#if defined(SMALLTV_ESP8266)
+  std::unique_ptr<NetClient> client(new WiFiClient());
+#else
   std::unique_ptr<NetClient> client(platformMakeSecureClient(2048));
+#endif
   HTTPClient http;
   http.setTimeout(s.httpTimeout);
   http.setReuse(false);
   http.useHTTP10(true);
   if (!http.begin(*client, url)) {
     m_weather.error = "Weather URL";
-    return;
+    return false;
   }
 
   int code = http.GET();
   if (code != HTTP_CODE_OK) {
     m_weather.error = code < 0 ? "Weather offline" : "Weather HTTP " + String(code);
     http.end();
-    return;
+    return false;
   }
 
   JsonDocument filter;
   filter["current_condition"][0]["temp_C"] = true;
   filter["current_condition"][0]["temp_F"] = true;
   filter["current_condition"][0]["humidity"] = true;
+  filter["current_condition"][0]["windspeedKmph"] = true;
   filter["current_condition"][0]["weatherCode"] = true;
   filter["current_condition"][0]["weatherDesc"][0]["value"] = true;
   filter["nearest_area"][0]["areaName"][0]["value"] = true;
@@ -172,19 +293,24 @@ void ClockMode::fetchWeather(const Settings& s) {
   http.end();
   if (err) {
     m_weather.error = "Weather JSON";
-    return;
+    return false;
   }
 
   JsonObjectConst cur = doc["current_condition"][0].as<JsonObjectConst>();
   if (cur.isNull()) {
     m_weather.error = "Weather empty";
-    return;
+    return false;
   }
 
   WeatherData next;
-  next.city = doc["nearest_area"][0]["areaName"][0]["value"] | s.clock.weatherCity.c_str();
+  // Keep the label chosen by the user. The provider's nearest-area result can
+  // be a small neighbouring district (for example Ban Thing Iung for Hua Hin).
+  next.city = s.clock.weatherCity.length()
+    ? s.clock.weatherCity
+    : String(doc["nearest_area"][0]["areaName"][0]["value"] | "Weather");
   next.temp = (s.clock.weatherUnits == "f") ? cur["temp_F"].as<float>() : cur["temp_C"].as<float>();
   next.humidity = constrain(cur["humidity"].as<int>(), 0, 100);
+  next.windKph = cur["windspeedKmph"].as<float>();
   next.weatherCode = cur["weatherCode"].as<uint16_t>();
   next.description = cur["weatherDesc"][0]["value"] | "Weather";
 
@@ -220,6 +346,7 @@ void ClockMode::fetchWeather(const Settings& s) {
   next.lastUpdateMs = millis();
   next.error = "";
   m_weather = next;
+  return true;
 }
 
 void ClockMode::service(const Settings& s) {
@@ -228,14 +355,32 @@ void ClockMode::service(const Settings& s) {
   if ((int32_t)(nowMs - m_nextFetchMs) >= 0) {
     uint32_t interval = (uint32_t)s.clock.weatherPollSec * 1000UL;
     if (interval < 60000UL) interval = 60000UL;
-    m_nextFetchMs = nowMs + interval;
-    fetchWeather(s);
+    bool ok = fetchWeather(s);
+    // A transient network/memory failure should not leave both weather pages
+    // empty for the full 15-minute normal interval.
+    m_nextFetchMs = nowMs + (ok ? interval : 30000UL);
     m_fullRepaint = true;
   }
 
   if (m_fullRepaint) {
     render(s);
     return;
+  }
+
+  if (s.github.statusUrl.length() >= 8) githubService(s);
+  const GithubData& github = githubGet();
+  bool githubChanged = github.revision != m_lastGithubRevision;
+  if (s.clock.theme == 0 &&
+      (githubChanged || (int32_t)(nowMs - m_nextGithubFrameMs) >= 0)) {
+    m_lastGithubRevision = github.revision;
+    m_githubFrame++;
+    renderGithubSummary(s);
+    m_nextGithubFrameMs = nowMs + 1000UL;
+  }
+  if (s.clock.theme == 0 && (int32_t)(nowMs - m_nextInfoPageMs) >= 0) {
+    m_infoPage = (uint8_t)((m_infoPage + 1) % 3);
+    renderInfoLine(s);
+    m_nextInfoPageMs = nowMs + 4000UL;
   }
 
   struct tm t;
@@ -254,19 +399,94 @@ void ClockMode::service(const Settings& s) {
   }
 }
 
+void ClockMode::renderInfoLine(const Settings& s) {
+  if (s.clock.theme != 0) return;
+  Arduino_GFX* g = gfxDev();
+  if (!g) return;
+  g->fillRect(8, 30, 224, 20, s.clock.bgColor);
+
+  char line[30];
+  uint16_t color = UI_WHITE;
+  if (m_infoPage == 0) {
+    if (m_weather.valid) snprintf(line, sizeof(line), "WIND %.1f KM/H", m_weather.windKph);
+    else strlcpy(line, "WIND --", sizeof(line));
+  } else if (m_infoPage == 1) {
+    String address = netMode() == NET_AP ? "192.168.4.1" : netIP();
+    snprintf(line, sizeof(line), "IP %s", address.c_str());
+    color = s.clock.accentColor;
+  } else {
+    if (m_weather.valid) fitUpper(m_weather.description, line, sizeof(line), 25);
+    else strlcpy(line, m_weather.error.length() ? m_weather.error.c_str() : "WEATHER CONNECTING", sizeof(line));
+    color = m_weather.valid ? s.clock.dateColor : UI_MUTED;
+  }
+  gfxPrint(10, 32, line, color, 2);
+}
+
+void ClockMode::renderGithubSummary(const Settings& s) {
+  if (s.clock.theme != 0) return;
+  Arduino_GFX* g = gfxDev();
+  if (!g) return;
+  g->fillRect(104, 176, 136, 64, s.clock.bgColor);
+
+  const GithubData& data = githubGet();
+  if (s.github.statusUrl.length() < 8) {
+    gfxPrint(112, 199, "GH NOT SET", UI_MUTED, 1);
+    return;
+  }
+  if (!data.valid || !data.runCount) {
+    gfxPrint(112, 199, data.error ? "GH ERROR" : "GH SYNC...", data.error ? UI_RED : UI_MUTED, 1);
+    return;
+  }
+
+  uint8_t count = min<uint8_t>(2, data.runCount);
+  for (uint8_t i = 0; i < count; i++) {
+    const GithubRun& run = data.runs[i];
+    int y = 191 + i * 30;
+    drawCompactGithubIcon(g, 113, y, run);
+
+    char repo[10];
+    clockMarquee(compactRepo(run.repo), repo, sizeof(repo), 9, m_githubFrame + i * 3);
+    gfxPrint(126, y - 8, repo, UI_WHITE, 2);
+  }
+}
+
 void ClockMode::renderTimeOnly(const Settings& s, const struct tm& t) {
   if (s.clock.theme >= 2) return;
   char nextTime[16];
-  formatClockTime(t, s, nextTime, sizeof(nextTime));
-  if (!strcmp(nextTime, m_lastTime)) return;
+  if (s.clock.theme == 0) {
+    int hour = t.tm_hour;
+    if (!s.clock.format24h) { hour %= 12; if (!hour) hour = 12; }
+    snprintf(nextTime, sizeof(nextTime), "%02d:%02d", hour, t.tm_min);
 
-  const GFXfont* font = clockTimeFont(s);
+    if (strcmp(nextTime, m_lastTime)) {
+      Arduino_GFX* g = gfxDev();
+      if (s.clock.showSeconds) {
+        g->fillRect(6, 72, 160, 62, s.clock.bgColor);
+        drawClockFontInReservedArea(nextTime, 103, s.clock.timeColor);
+      } else {
+        g->fillRect(0, 72, 240, 62, s.clock.bgColor);
+        drawFontCentered(nextTime, 103, &MontserratBold28pt7b, s.clock.timeColor);
+      }
+      strlcpy(m_lastTime, nextTime, sizeof(m_lastTime));
+    }
+
+    if (s.clock.showSeconds) {
+      Arduino_GFX* g = gfxDev();
+      g->fillRect(177, 87, 60, 34, s.clock.bgColor);
+      char seconds[4];
+      snprintf(seconds, sizeof(seconds), "%02d", t.tm_sec);
+      gfxPrint(184, 91, seconds, UI_YELLOW, 3);
+    }
+    return;
+  }
+
   const int centerY = s.clock.theme == 0 ? 116 : 43;
-
   // GFX custom-font text is transparent. Painting the previous glyphs in the
   // panel color erases only pixels that changed, avoiding a visible rectangular
   // clear and the old full-screen repaint.
-  if (m_lastTime[0]) drawFontCentered(m_lastTime, centerY, font, UI_PANEL);
+  uint16_t eraseColor = s.clock.theme == 0 ? s.clock.bgColor : UI_PANEL;
+  const GFXfont* font = clockTimeFont(s);
+  if (m_lastTime[0]) drawFontCentered(m_lastTime, centerY, font, eraseColor);
   drawFontCentered(nextTime, centerY, font, s.clock.timeColor);
   strlcpy(m_lastTime, nextTime, sizeof(m_lastTime));
 }
@@ -295,18 +515,50 @@ void ClockMode::render(const Settings& s) {
   const GFXfont* timeFont = clockTimeFont(s);
 
   if (s.clock.theme == 0) {
-    // Screen 1: time dominates; date and IP remain readable from a distance.
-    gfxFillRoundRect(6, 6, 228, 44, 10, UI_PANEL_BLUE);
-    gfxDrawRoundRect(6, 6, 228, 44, 10, dc);
-    if (s.clock.showDate) drawFontCentered(dateStr, 28, &MontserratBold18pt7b, dc);
+    char city[18];
+    fitUpper(s.clock.weatherCity.length() ? s.clock.weatherCity : "WEATHER",
+             city, sizeof(city), 15);
+    gfxPrint(10, 8, city, UI_YELLOW, 2);
+    bool wifiConnected = WiFi.status() == WL_CONNECTED;
+    g->fillCircle(220, 16, 7, wifiConnected ? UI_GREEN : UI_RED);
+    g->drawCircle(220, 16, 8, UI_WHITE);
 
-    gfxFillRoundRect(6, 56, 228, 120, 12, UI_PANEL);
-    gfxDrawRoundRect(6, 56, 228, 120, 12, tc);
-    drawFontCentered(timeStr, 116, timeFont, tc);
+    m_infoPage = 0;
+    renderInfoLine(s);
+    m_nextInfoPageMs = millis() + 4000UL;
 
-    gfxFillRoundRect(6, 182, 228, 52, 10, UI_PANEL_BLUE);
-    gfxDrawRoundRect(6, 182, 228, 52, 10, ac);
-    drawFontCentered(ip, 208, &MontserratBold18pt7b, ac);
+    int hour = timeOk ? t.tm_hour : 0;
+    if (!s.clock.format24h) { hour %= 12; if (!hour) hour = 12; }
+    if (timeOk) snprintf(timeStr, sizeof(timeStr), "%02d:%02d", hour, t.tm_min);
+    else strlcpy(timeStr, "--:--", sizeof(timeStr));
+    if (s.clock.showSeconds) {
+      drawClockFontInReservedArea(timeStr, 103, tc);
+      char seconds[4] = "--";
+      if (timeOk) snprintf(seconds, sizeof(seconds), "%02d", t.tm_sec);
+      gfxPrint(184, 91, seconds, UI_YELLOW, 3);
+    } else {
+      drawFontCentered(timeStr, 103, &MontserratBold28pt7b, tc);
+    }
+
+    if (s.clock.showDate) gfxDrawCentered(dateStr, 149, 2, dc);
+
+    if (m_weather.valid) {
+      char temp[12], humid[12];
+      formatTemp(m_weather.temp, s, temp, sizeof(temp));
+      snprintf(humid, sizeof(humid), "%u%%", m_weather.humidity);
+      drawThermometer(11, 177, tc);
+      gfxPrint(35, 181, temp, UI_WHITE, 2);
+      drawDroplet(10, 207, ac);
+      gfxPrint(35, 211, humid, UI_WHITE, 2);
+    } else {
+      gfxPrint(10, 184, "TEMP --", UI_MUTED, 2);
+      gfxPrint(10, 212, "HUM --", UI_MUTED, 2);
+    }
+
+    m_lastGithubRevision = UINT32_MAX;
+    m_githubFrame = 0;
+    renderGithubSummary(s);
+    m_nextGithubFrameMs = millis() + 1000UL;
   } else if (s.clock.theme == 1) {
     // Screen 2: clock + current weather + location + humidity + date + IP.
     gfxFillRoundRect(6, 6, 228, 78, 10, UI_PANEL);

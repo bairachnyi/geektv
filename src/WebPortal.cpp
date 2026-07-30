@@ -140,6 +140,17 @@ static void handleStatus() {
   o["clockFresh"] = clockTrusted();       // last NTP sync within the trust window
 
   {
+    const GithubData& g = githubGet();
+    JsonObject gh = o["github"].to<JsonObject>();
+    gh["valid"] = g.valid;
+    gh["error"] = g.error;
+    gh["runs"] = g.runCount;
+    gh["errorCode"] = g.errorCode;
+    gh["errorMessage"] = g.errorMessage;
+    gh["errorSource"] = g.errorSource;
+  }
+
+  {
     const CodexData& c = codexGet();
     JsonObject cx = o["codex"].to<JsonObject>();
     cx["valid"] = c.valid;

@@ -35,23 +35,15 @@ static uint8_t typeFrom(const char* value) {
   return GH_EVENT_ACTION;
 }
 
-static void addGithubFilter(JsonObject f) {
-  f["repo"] = true; f["type"] = true; f["workflow"] = true; f["branch"] = true;
-  f["status"] = true; f["conclusion"] = true; f["age"] = true; f["when"] = true;
-  f["latest"] = true;
-}
-
 static bool parseGithub(Stream& stream) {
-  JsonDocument filter;
-  filter["ok"] = true; filter["message"] = true;
-  filter["error"]["code"] = true; filter["error"]["message"] = true;
-  filter["error"]["source"] = true; filter["error"]["repo"] = true;
-  addGithubFilter(filter["items"][0].to<JsonObject>());
-  addGithubFilter(filter["runs"][0].to<JsonObject>()); // v0.1 bridge compatibility
-
   JsonDocument doc;
-  if (deserializeJson(doc, stream, DeserializationOption::Filter(filter))) {
-    setGithubError("BAD_RESPONSE", "Bridge returned invalid JSON.", "bridge");
+  // The bridge already limits the device feed to six compact events. Parsing
+  // that response directly is both cheaper and more reliable than maintaining
+  // an ArduinoJson filter document (which could discard the items array on the
+  // ESP8266 build and report a misleading "no event list" error).
+  DeserializationError jsonError = deserializeJson(doc, stream);
+  if (jsonError) {
+    setGithubError("BAD_RESPONSE", jsonError.c_str(), "bridge");
     return false;
   }
   if (doc["ok"].is<bool>() && !doc["ok"].as<bool>()) {
@@ -67,7 +59,11 @@ static bool parseGithub(Stream& stream) {
     return false;
   }
 
-  GithubData next; next.clear();
+  // GithubData contains the full run list and is too large for the ESP8266's
+  // small continuation stack. Keep the parsing scratch buffer in static RAM;
+  // the client is single-threaded, so no re-entrancy is required.
+  static GithubData next;
+  next.clear();
   strlcpy(next.message, doc["message"] | "", sizeof(next.message));
   JsonObjectConst warning = doc["error"].as<JsonObjectConst>();
   if (!warning.isNull()) {

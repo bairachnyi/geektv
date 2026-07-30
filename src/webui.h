@@ -683,18 +683,45 @@ function updateClockPreview(){
   drawRRect(cx-20,cy-13,40,26,8,'#081018',color);
   drawCentered(label,cy,8,color,mono,'700');
  }
+ function bunnyMark(){
+  ctx.save();
+  ctx.strokeStyle='#ffffff';ctx.lineWidth=1.4;ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.beginPath();
+  ctx.moveTo(207,182);ctx.lineTo(207,199);
+  ctx.moveTo(207,199);ctx.bezierCurveTo(192,198,185,207,189,219);
+  ctx.bezierCurveTo(192,233,207,237,219,229);
+  ctx.bezierCurveTo(230,221,228,207,217,202);
+  ctx.moveTo(195,203);ctx.bezierCurveTo(191,193,196,189,202,201);
+  ctx.moveTo(217,203);ctx.bezierCurveTo(229,193,234,199,222,210);
+  ctx.moveTo(197,229);ctx.lineTo(194,237);ctx.moveTo(216,231);ctx.lineTo(219,238);
+  ctx.stroke();ctx.restore();
+ }
 
  var timeStr=showSec?'12:34:56':'12:34';
  var dateStr='MON, 25 JUL 2026';
  var ipStr='IP: 192.168.1.50';
 
  if(theme===0){
-  drawRRect(6,6,228,44,10,'#081421',dc);
-  if(showDt)drawCentered(dateStr,28,18,dc,fontFamily,'700');
-  drawRRect(6,56,228,120,12,'#081018',tc);
-  drawCentered(timeStr,116,showSec?38:54,tc,fontFamily,'700');
-  drawRRect(6,182,228,52,10,'#081421',ac);
-  drawCentered(ipStr,208,18,ac,fontFamily,'700');
+  drawText(city,10,8,16,'#ffff00',mono,'700');
+  ctx.fillStyle='#47fc42';ctx.strokeStyle='#ffffff';ctx.lineWidth=1;
+  ctx.beginPath();ctx.arc(220,16,7,0,Math.PI*2);ctx.fill();ctx.stroke();
+  drawText('WIND 4.1 KM/H',10,32,16,'#ffffff',mono,'700');
+  if(showSec){
+   drawText('12:34',8,82,34,tc,fontFamily,'700');
+   drawText('56',184,91,24,'#ffff00',mono,'700');
+  }else{
+   drawCentered('12:34',103,49,tc,fontFamily,'700');
+  }
+  if(showDt)drawCentered(dateStr,149,16,dc,mono,'700');
+  ctx.strokeStyle=tc;ctx.lineWidth=2;
+  ctx.strokeRect(15,177,7,18);ctx.beginPath();ctx.arc(18.5,198,6,0,Math.PI*2);ctx.stroke();
+  drawText('29C',35,181,16,'#ffffff',mono,'700');
+  ctx.strokeStyle=ac;ctx.beginPath();ctx.moveTo(18,207);ctx.lineTo(11,219);ctx.arc(18,220,7,Math.PI,0);ctx.closePath();ctx.stroke();
+  drawText('74%',35,211,16,'#ffffff',mono,'700');
+  [['✓','geektv','#47fc42'],['▶','api-server','#00ffff'],['PR','web-app','#ffb000']].forEach(function(r,i){
+   drawText(r[0],107,178+i*21,12,r[2],mono,'700');
+   drawText(r[1],126,178+i*21,8,r[2],mono,'700');
+  });
  } else if(theme===1){
   drawRRect(6,6,228,78,10,'#081018',tc);
   drawCentered(timeStr,43,showSec?34:46,tc,fontFamily,'700');
