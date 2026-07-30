@@ -782,7 +782,10 @@ async function refreshLiveData() {
     if (githubBlockedUntil > Date.now()) break;
     batches.push(...await collectRepo(repo, warnings));
   }
-  const priority = r => ['in_progress', 'queued', 'waiting', 'pending'].includes(r.status) ? 0 : r.conclusion === 'failure' ? 1 : 2;
+  // Active work deserves attention until it finishes. Completed events,
+  // regardless of success or failure, are then ordered only by recency so an
+  // old failure cannot permanently hide a newer successful build.
+  const priority = r => ['in_progress', 'queued', 'waiting', 'pending'].includes(r.status) ? 0 : 1;
   batches.sort((a, b) => priority(a) - priority(b) || a.age - b.age);
   const data = response(batches.slice(0, 8), warnings.length
     ? `Watching ${repos.length}; ${warnings.length} source errors`
