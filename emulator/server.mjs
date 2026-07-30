@@ -352,6 +352,8 @@ try {
 let scenario = 'mixed';
 let cache = { at: 0, data: null };
 let livePromise = null;
+let activeRefreshPromise = null;
+let activeRefreshAt = 0;
 let githubBlockedUntil = 0;
 let githubRate = { limit: 0, remaining: 0, resetAt: 0, resource: 'core' };
 
@@ -785,8 +787,7 @@ async function refreshLiveData() {
   // Active work deserves attention until it finishes. Completed events,
   // regardless of success or failure, are then ordered only by recency so an
   // old failure cannot permanently hide a newer successful build.
-  const priority = r => ['in_progress', 'queued', 'waiting', 'pending'].includes(r.status) ? 0 : 1;
-  batches.sort((a, b) => priority(a) - priority(b) || a.age - b.age);
+  batches.sort(compareEvents);
   const data = response(batches.slice(0, 8), warnings.length
     ? `Watching ${repos.length}; ${warnings.length} source errors`
     : `Watching ${repos.length} repositories`);
@@ -795,6 +796,45 @@ async function refreshLiveData() {
   if (warnings.length && !batches.length) { data.ok = false; data.error = warnings[0]; }
   cache = { at: Date.now(), data };
   return cache.data;
+}
+
+function eventIsActive(event) {
+  return ['in_progress', 'queued', 'waiting', 'pending'].includes(event?.status);
+}
+
+function compareEvents(a, b) {
+  const priority = event => eventIsActive(event) ? 0 : 1;
+  return priority(a) - priority(b) || a.age - b.age;
+}
+
+async function refreshActiveEvents() {
+  if (activeRefreshPromise || livePromise || githubBlockedUntil > Date.now()) return activeRefreshPromise;
+  const active = (cache.data?.items || []).filter(eventIsActive);
+  const repos = [...new Set(active.map(event => event.repo).filter(Boolean))];
+  if (!repos.length || Date.now() - activeRefreshAt < 9000) return null;
+  activeRefreshAt = Date.now();
+  activeRefreshPromise = (async () => {
+    const warnings = [];
+    const refreshed = [];
+    for (const repo of repos) refreshed.push(...await collectRepo(repo, warnings));
+    const merged = [
+      ...(cache.data?.items || []).filter(event => !repos.includes(event.repo)),
+      ...refreshed,
+    ];
+    merged.sort(compareEvents);
+    const data = response(merged.slice(0, 8), cache.data?.message || '');
+    data.warnings = warnings.slice(0, 8);
+    if (warnings.length) data.error = warnings[0];
+    cache.data = data;
+    return data;
+  })().catch(error => {
+    record('warn', 'github.active-refresh.failed', {
+      code: error.code || 'GITHUB_ERROR',
+      message: error.message,
+    });
+    return cache.data;
+  }).finally(() => { activeRefreshPromise = null; });
+  return activeRefreshPromise;
 }
 
 async function liveData(forceRefresh = false) {
@@ -863,6 +903,15 @@ setInterval(() => {
       message: error.message,
     }));
   }
+}, 10000);
+
+// Once an active event has been discovered, follow that repository closely so
+// completion appears on the display within roughly one device polling cycle.
+// This is intentionally targeted; polling every configured repository every
+// ten seconds would exhaust the GitHub REST quota.
+setInterval(() => {
+  if (bridgeConfig.mode !== 'live' || bridgeConfig.delivery !== 'polling') return;
+  refreshActiveEvents();
 }, 10000);
 
 function completedState(state) {

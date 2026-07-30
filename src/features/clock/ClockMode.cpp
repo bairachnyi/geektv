@@ -83,7 +83,7 @@ static uint16_t githubStateColor(uint8_t state) {
   return UI_MUTED;
 }
 
-static void drawCompactGithubIcon(Arduino_GFX* g, int x, int y, const GithubRun& run) {
+static void drawCompactGithubIcon(Arduino_GFX* g, int x, int y, const GithubRun& run, uint16_t frame) {
   uint16_t color = githubStateColor(run.state);
   if (run.type == GH_EVENT_PULL_REQUEST) {
     g->fillCircle(x - 3, y - 5, 2, color);
@@ -98,8 +98,14 @@ static void drawCompactGithubIcon(Arduino_GFX* g, int x, int y, const GithubRun&
     g->drawLine(x - 5, y - 5, x + 5, y + 5, color);
     g->drawLine(x + 5, y - 5, x - 5, y + 5, color);
   } else if (run.state == GH_RUNNING || run.state == GH_QUEUED) {
-    g->drawCircle(x, y, 6, color);
-    g->fillTriangle(x - 2, y - 4, x - 2, y + 4, x + 4, y, color);
+    static const int8_t dx[8] = {0, 4, 6, 4, 0, -4, -6, -4};
+    static const int8_t dy[8] = {-6, -4, 0, 4, 6, 4, 0, -4};
+    const uint16_t spinner = UI_YELLOW;
+    for (uint8_t dot = 0; dot < 8; dot++) {
+      uint8_t distance = (dot + 8 - (frame & 7)) & 7;
+      uint16_t dotColor = distance < 3 ? spinner : 0x632C;
+      g->fillCircle(x + dx[dot], y + dy[dot], distance == 0 ? 2 : 1, dotColor);
+    }
   } else {
     g->drawCircle(x, y, 5, color);
   }
@@ -442,7 +448,7 @@ void ClockMode::renderGithubSummary(const Settings& s) {
   for (uint8_t i = 0; i < count; i++) {
     const GithubRun& run = data.runs[i];
     int y = 191 + i * 30;
-    drawCompactGithubIcon(g, 113, y, run);
+    drawCompactGithubIcon(g, 113, y, run, m_githubFrame + i * 3);
 
     char repo[10];
     clockMarquee(compactRepo(run.repo), repo, sizeof(repo), 9, m_githubFrame + i * 3);
