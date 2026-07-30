@@ -11,9 +11,7 @@ class GithubMode : public DisplayMode {
   void wake(const Settings& s) override;
  private:
   uint32_t renderedAt_ = 0;
-  uint32_t nextPageMs_ = 0;
   uint32_t nextAnimMs_ = 0;
-  uint8_t page_ = 0;
   uint32_t animationFrame_ = 0;
   bool needRender_ = true;
   bool lastStale_ = false;

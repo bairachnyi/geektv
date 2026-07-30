@@ -5,8 +5,8 @@
 
 GithubMode g_githubMode;
 
-static const uint16_t GH_BG = 0x0208;
-static const uint16_t GH_CARD = 0x08D2;
+static const uint16_t GH_BG = 0x0000;
+static const uint16_t GH_CARD = 0x0000;
 static const uint16_t GH_MUTED = 0x6B6D;
 static const uint16_t GH_CYAN = 0x07FF;
 static const uint16_t GH_GREEN = 0x4FE9;
@@ -51,25 +51,6 @@ static void fitCopy(const char* src, char* out, size_t n, size_t maxChars) {
   strlcat(out, "..", n);
 }
 
-// Character-based marquee for the fixed-width built-in font. Long values pause
-// briefly, move left through a three-space gap, then restart seamlessly.
-static void marqueeCopy(const char* src, char* out, size_t n, size_t visibleChars, uint32_t frame) {
-  if (!src) src = "";
-  size_t len = strlen(src);
-  if (len <= visibleChars) { strlcpy(out, src, n); return; }
-  const uint8_t gap = 3;
-  const uint8_t holdSteps = 6;
-  size_t period = len + gap;
-  size_t phase = (frame / 2) % (holdSteps + period);
-  size_t start = phase < holdSteps ? 0 : phase - holdSteps;
-  size_t count = min(visibleChars, n - 1);
-  for (size_t i = 0; i < count; i++) {
-    size_t at = (start + i) % period;
-    out[i] = at < len ? src[at] : ' ';
-  }
-  out[count] = 0;
-}
-
 static const char* errorTitle(const char* code, bool stale) {
   if (stale) return "DATA STALE";
   if (!strcmp(code, "TOKEN_INVALID") || !strcmp(code, "TOKEN_DENIED") || !strcmp(code, "DEVICE_TOKEN_DENIED")) return "TOKEN DENIED";
@@ -93,20 +74,7 @@ static bool activeState(uint8_t state) {
   return state == GH_RUNNING || state == GH_QUEUED;
 }
 
-static uint8_t visibleRunCount(const GithubData& d) {
-  return d.runningCount ? d.runningCount : d.runCount;
-}
-
-static const GithubRun* visibleRunAt(const GithubData& d, uint8_t visibleIndex) {
-  bool activeOnly = d.runningCount > 0;
-  for (uint8_t i = 0, seen = 0; i < d.runCount; i++) {
-    if (activeOnly && !activeState(d.runs[i].state)) continue;
-    if (seen++ == visibleIndex) return &d.runs[i];
-  }
-  return nullptr;
-}
-
-static void drawHeader(Arduino_GFX* gfx, uint8_t page, uint8_t pages, bool priority, bool warning, bool stale) {
+static void drawHeader(Arduino_GFX* gfx, bool priority, bool warning, bool stale) {
   gfx->setTextSize(2); gfx->setTextColor(C_WHITE); gfx->setCursor(7, 7); gfx->print("GH");
   gfx->setTextColor(GH_CYAN); gfx->print("//");
   gfx->setTextColor(C_WHITE); gfx->print("STAT");
@@ -115,9 +83,6 @@ static void drawHeader(Arduino_GFX* gfx, uint8_t page, uint8_t pages, bool prior
   gfx->setTextSize(1); gfx->setTextColor(liveColor); gfx->setCursor(181, 10); gfx->print(priority ? "FOCUS" : "LIVE");
   if (stale) { gfx->setCursor(181, 10); gfx->print("STALE"); }
   else if (warning && !priority) { gfx->setCursor(181, 10); gfx->print("WARN"); }
-  if (pages > 1) {
-    gfx->setTextColor(GH_MUTED); gfx->setCursor(216, 10); gfx->print(page + 1); gfx->print('/'); gfx->print(pages);
-  }
   gfx->drawFastHLine(6, 29, 228, 0x1924);
   gfx->drawFastHLine(6, 29, 66, GH_CYAN);
 }
@@ -140,12 +105,6 @@ static void drawErrorScreen(Arduino_GFX* gfx, const GithubData& d, bool configur
     gfxDrawCentered(msg, repo[0] ? 155 : 143, 1, GH_MUTED);
     gfxDrawCentered("[ open GitHub settings ]", 188, 1, GH_CYAN);
   }
-}
-
-static void drawSummary(Arduino_GFX* gfx, int x, const char* label, uint8_t value, uint16_t color) {
-  gfx->fillCircle(x, 44, 4, color);
-  gfx->setTextSize(2); gfx->setTextColor(GH_MUTED); gfx->setCursor(x + 8, 36); gfx->print(label);
-  gfx->setTextColor(C_WHITE); gfx->print(value);
 }
 
 static void drawStateIcon(Arduino_GFX* gfx, int cx, int cy, uint8_t state, uint8_t frame) {
@@ -187,12 +146,48 @@ static void formatElapsed(const GithubRun& r, const GithubData& d, char* out, si
   }
 }
 
-static void drawGithub(const GithubData& d, uint8_t page, bool configured, bool stale, uint32_t frame) {
+static void drawGithubRow(Arduino_GFX* gfx, const GithubRun& r, const GithubData& d,
+                          uint8_t row, uint32_t frame) {
+  int y = 35 + row * 66;
+  uint16_t color = stateColor(r.state);
+  gfx->fillRect(4, y, 232, 62, GH_BG);
+  gfx->drawRoundRect(4, y, 232, 62, 5, 0x1924);
+  gfx->fillRoundRect(4, y + 5, 3, 52, 1, color);
+  drawStateIcon(gfx, 19, y + 17, r.state, frame + row * 2);
+
+  char repo[13], workflow[37], branch[18], right[9];
+  fitCopy(shortRepo(r.repo), repo, sizeof(repo), 12);
+  fitCopy(r.workflow, workflow, sizeof(workflow), 36);
+  fitCopy(r.branch, branch, sizeof(branch), 17);
+  if (activeState(r.state)) formatElapsed(r, d, right, sizeof(right));
+  else strlcpy(right, stateLabel(r.state), sizeof(right));
+
+  gfx->setTextSize(2);
+  gfx->setTextColor(C_WHITE);
+  gfx->setCursor(35, y + 7);
+  gfx->print(repo);
+  gfx->setTextColor(color);
+  gfx->setCursor(232 - gfxTextW(right, 2), y + 7);
+  gfx->print(right);
+
+  gfx->setTextSize(1);
+  gfx->setTextColor(GH_MUTED);
+  gfx->setCursor(12, y + 31);
+  gfx->print(workflow);
+  gfx->setTextColor(0xA534);
+  gfx->setCursor(12, y + 47);
+  gfx->print(eventLabel(r.type));
+  gfx->print(' ');
+  gfx->print(branch);
+  gfx->setTextColor(C_WHITE);
+  gfx->setCursor(232 - gfxTextW(r.when, 1), y + 47);
+  gfx->print(r.when);
+}
+
+static void drawGithub(const GithubData& d, bool configured, bool stale, uint32_t frame) {
   Arduino_GFX* gfx = gfxDev(); if (!gfx) return;
   gfx->fillScreen(GH_BG);
-  uint8_t visibleCount = visibleRunCount(d);
-  uint8_t pages = (visibleCount + 1) / 2; if (!pages) pages = 1;
-  drawHeader(gfx, page, pages, d.runningCount > 0, d.error, stale);
+  drawHeader(gfx, d.runningCount > 0, d.error, stale);
   // Keep displaying the last valid events when one source is degraded or the
   // feed is stale. A fatal error screen is reserved for cases with no usable
   // event data at all.
@@ -201,48 +196,33 @@ static void drawGithub(const GithubData& d, uint8_t page, bool configured, bool 
     return;
   }
 
-  drawSummary(gfx, 8, "R", d.runningCount, GH_CYAN);
-  drawSummary(gfx, 83, "P", d.successCount, GH_GREEN);
-  drawSummary(gfx, 164, "F", d.failureCount, GH_RED);
-
   if (!d.runCount) { gfxDrawCentered("No workflow runs", 125, 2, GH_MUTED); return; }
+  uint8_t count = min<uint8_t>(3, d.runCount);
+  for (uint8_t row = 0; row < count; row++) drawGithubRow(gfx, d.runs[row], d, row, frame);
+}
 
-  const uint8_t perPage = 2;
-  uint8_t start = page * perPage;
-  for (uint8_t row = 0; row < perPage && start + row < visibleCount; row++) {
-    const GithubRun* selected = visibleRunAt(d, start + row);
-    if (!selected) continue;
-    const GithubRun& r = *selected;
-    int y = 55 + row * 90;
-    uint16_t color = stateColor(r.state);
-    gfx->fillRoundRect(4, y, 232, 84, 7, GH_CARD);
-    gfx->drawRoundRect(4, y, 232, 84, 7, r.latest ? GH_CYAN : 0x1924);
-    if (r.latest) gfx->drawRoundRect(6, y + 2, 228, 80, 6, 0x34BF);
-    gfx->fillRoundRect(4, y + 7, 4, 70, 2, color);
-    drawStateIcon(gfx, 19, y + 18, r.state, frame + row * 2);
-
-    char repo[11], workflow[19], branch[19], right[9];
-    marqueeCopy(shortRepo(r.repo), repo, sizeof(repo), 10, frame + row * 3);
-    marqueeCopy(r.workflow, workflow, sizeof(workflow), 18, frame + row * 3);
-    marqueeCopy(r.branch, branch, sizeof(branch), 18, frame + row * 3);
-    if (r.state == GH_RUNNING || r.state == GH_QUEUED) formatElapsed(r, d, right, sizeof(right));
-    else strlcpy(right, stateLabel(r.state), sizeof(right));
-
-    gfx->setTextSize(2); gfx->setTextColor(C_WHITE); gfx->setCursor(38, y + 6); gfx->print(repo);
-    gfx->setTextColor(color); gfx->setCursor(232 - gfxTextW(right, 2), y + 6); gfx->print(right);
-    gfx->setTextColor(GH_MUTED); gfx->setCursor(12, y + 28); gfx->print(workflow);
-    gfx->setTextColor(0xA534); gfx->setCursor(12, y + 48); gfx->print(branch);
-    gfx->fillRoundRect(9, y + 65, 39, 16, 3, 0x1924);
-    gfx->setTextColor(color); gfx->setCursor(11, y + 67); gfx->print(eventLabel(r.type));
-    gfx->setTextColor(C_WHITE); gfx->setCursor(87, y + 67); gfx->print(r.when);
+static void drawActiveIndicators(const GithubData& d, uint32_t frame) {
+  Arduino_GFX* gfx = gfxDev(); if (!gfx) return;
+  uint8_t count = min<uint8_t>(3, d.runCount);
+  for (uint8_t row = 0; row < count; row++) {
+    const GithubRun& r = d.runs[row];
+    if (!activeState(r.state)) continue;
+    int y = 35 + row * 66;
+    gfx->fillRect(9, y + 7, 21, 21, GH_BG);
+    drawStateIcon(gfx, 19, y + 17, r.state, frame + row * 2);
+    char right[9];
+    formatElapsed(r, d, right, sizeof(right));
+    gfx->fillRect(180, y + 5, 55, 20, GH_BG);
+    gfx->setTextSize(2);
+    gfx->setTextColor(stateColor(r.state));
+    gfx->setCursor(232 - gfxTextW(right, 2), y + 7);
+    gfx->print(right);
   }
 }
 
 void GithubMode::begin(const Settings& s) {
   githubInit(s);
   renderedAt_ = 0;
-  page_ = 0;
-  nextPageMs_ = millis() + (uint32_t)s.github.rotateSec * 1000UL;
   nextAnimMs_ = millis();
   animationFrame_ = 0;
   needRender_ = true;
@@ -251,8 +231,6 @@ void GithubMode::begin(const Settings& s) {
 void GithubMode::invalidate(const Settings& s) {
   githubInit(s);
   githubForceRefresh();
-  page_ = 0;
-  nextPageMs_ = millis() + (uint32_t)s.github.rotateSec * 1000UL;
   nextAnimMs_ = millis();
   animationFrame_ = 0;
   needRender_ = true;
@@ -265,19 +243,11 @@ void GithubMode::service(const Settings& s) {
   const GithubData& d = githubGet();
   bool stale = d.valid && !githubFresh(((uint32_t)s.github.pollSec * 3UL + 10UL) * 1000UL);
   if (stale != lastStale_) { lastStale_ = stale; needRender_ = true; }
-  uint8_t pages = (visibleRunCount(d) + 1) / 2;
-  if (!pages) pages = 1;
-  if (page_ >= pages) { page_ = 0; needRender_ = true; }
-  if (pages > 1 && (int32_t)(millis() - nextPageMs_) >= 0) {
-    page_ = (page_ + 1) % pages;
-    nextPageMs_ = millis() + (uint32_t)s.github.rotateSec * 1000UL;
-    needRender_ = true;
-  }
   if (d.revision != renderedAt_) { renderedAt_ = d.revision; needRender_ = true; }
   if ((int32_t)(millis() - nextAnimMs_) >= 0) {
     nextAnimMs_ = millis() + 200;
     animationFrame_++;
-    needRender_ = true;
+    if (!needRender_ && d.valid && d.runningCount) drawActiveIndicators(d, animationFrame_);
   }
-  if (needRender_) { drawGithub(d, page_, configured, stale, animationFrame_); needRender_ = false; }
+  if (needRender_) { drawGithub(d, configured, stale, animationFrame_); needRender_ = false; }
 }
