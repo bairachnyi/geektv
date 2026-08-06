@@ -26,6 +26,7 @@ private:
   void scanPhotos();
   void nextPhoto(const Settings& s);
   void renderCurrent(const Settings& s);
+  void renderCurrentNow(const Settings& s);
   void closeGif();
   bool openGif(const String& path);
   void serviceGif();

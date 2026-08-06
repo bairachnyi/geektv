@@ -705,12 +705,15 @@ function updateClockPreview(){
   drawText(city,10,8,16,'#ffff00',mono,'700');
   ctx.fillStyle='#47fc42';ctx.strokeStyle='#ffffff';ctx.lineWidth=1;
   ctx.beginPath();ctx.arc(220,16,7,0,Math.PI*2);ctx.fill();ctx.stroke();
-  drawText('WIND 4.1 KM/H',10,32,16,'#ffffff',mono,'700');
+  drawText('≋',10,29,24,ac,mono,'700');
+  drawText('4.1 KM/H',35,33,14,'#ffffff',mono,'700');
+  drawText('☁',154,30,20,ac,mono,'700');
   if(showSec){
-   drawText('12:34',8,82,34,tc,fontFamily,'700');
+   drawText('12:34',8,82,42,tc,fontFamily,'700');
    drawText('56',184,91,24,'#ffff00',mono,'700');
   }else{
-   drawCentered('12:34',103,49,tc,fontFamily,'700');
+   // Match the proven 40px device font.
+   drawCentered('12:34',103,66,tc,fontFamily,'700');
   }
   if(showDt)drawCentered(dateStr,149,16,dc,mono,'700');
   ctx.strokeStyle=tc;ctx.lineWidth=2;
@@ -718,9 +721,9 @@ function updateClockPreview(){
   drawText('29C',35,181,16,'#ffffff',mono,'700');
   ctx.strokeStyle=ac;ctx.beginPath();ctx.moveTo(18,207);ctx.lineTo(11,219);ctx.arc(18,220,7,Math.PI,0);ctx.closePath();ctx.stroke();
   drawText('74%',35,211,16,'#ffffff',mono,'700');
-  [['✓','geektv','#47fc42'],['▶','api-server','#00ffff'],['PR','web-app','#ffb000']].forEach(function(r,i){
+  [['✓','geektv','#47fc42'],['◌','dashboard','#00ffff']].forEach(function(r,i){
    drawText(r[0],107,178+i*21,12,r[2],mono,'700');
-   drawText(r[1],126,178+i*21,8,r[2],mono,'700');
+   drawText(r[1],126,178+i*21,8,'#ffffff',mono,'700');
   });
  } else if(theme===1){
   drawRRect(6,6,228,78,10,'#081018',tc);

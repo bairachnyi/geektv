@@ -171,6 +171,7 @@ static bool     g_safeMode = false;   // last reset was an exception -> don't re
 static char     g_epcStr[16] = "";
 static char     g_addrStr[16] = "";
 static int g_lastBr = -1;        // last effective brightness written (-1 = none yet)
+static bool g_lastBrInverted = false;
 #if HAS_LDR
 static uint32_t g_lastAutoBr = 0;
 static uint8_t  g_ldrCache   = DEFAULT_BRIGHTNESS;   // last LDR reading (2 s cadence)
@@ -195,8 +196,11 @@ static uint8_t appEffectiveBrightness() {
 
 void appApplyBrightness() {
   uint8_t t = appEffectiveBrightness();
-  if ((int)t != g_lastBr) {
+  // The PWM polarity is part of the effective output state. Re-apply when the
+  // user toggles active-low backlight even if the percentage itself is equal.
+  if ((int)t != g_lastBr || g_settings.backlightInverted != g_lastBrInverted) {
     g_lastBr = t;
+    g_lastBrInverted = g_settings.backlightInverted;
     gfxSetBrightness(t, g_settings.backlightInverted);
   }
 }

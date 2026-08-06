@@ -58,6 +58,7 @@ class Arduino_ST7789_SmallTV : public Arduino_ST7789 {
 
 static Arduino_DataBus* bus = nullptr;
 static Arduino_GFX*     gfx = nullptr;
+static uint8_t           s_brightness = 100;
 
 Arduino_GFX* gfxDev() { return gfx; }
 
@@ -101,10 +102,13 @@ void gfxBegin(const Settings& s) {
 
 void gfxSetBrightness(uint8_t pct, bool inverted) {
   if (pct > 100) pct = 100;
+  s_brightness = pct;
   int duty = (int)pct * 255 / 100;
   if (inverted) duty = 255 - duty;
   analogWrite(TFT_BL, duty);
 }
+
+uint8_t gfxBrightness() { return s_brightness; }
 
 void gfxSetRotation(uint8_t r) {
   if (gfx) gfx->setRotation(r & 3);

@@ -23,6 +23,9 @@ class Arduino_GFX;   // fwd-decl: only the drawing .cpp files pull in the full l
 // ---- Device lifecycle -----------------------------------------------------
 void         gfxBegin(const Settings& s);
 void         gfxSetBrightness(uint8_t pct, bool inverted);
+// Logical backlight level last applied by gfxSetBrightness (0..100%).
+// Feature transitions use this value to fade without allocating a framebuffer.
+uint8_t      gfxBrightness();
 void         gfxSetRotation(uint8_t r);
 Arduino_GFX* gfxDev();                 // shared draw target for feature renderers
 

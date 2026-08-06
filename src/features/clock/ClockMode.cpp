@@ -25,6 +25,10 @@ static void drawFontCentered(const char* txt, int yCenter, const GFXfont* font, 
   Arduino_GFX* g = gfxDev();
   if (!g || !txt || !txt[0]) return;
   g->setFont(font);
+  // Built-in labels use different integer scales. Always reset the scale
+  // before custom glyphs so the clock cannot randomly grow or shrink after a
+  // weather/status repaint.
+  g->setTextSize(1);
   g->setTextColor(color);
   int16_t x1 = 0, y1 = 0;
   uint16_t w = 0, h = 0;
@@ -38,8 +42,9 @@ static void drawFontCentered(const char* txt, int yCenter, const GFXfont* font, 
 static void drawClockFontInReservedArea(const char* text, int yCenter, uint16_t color) {
   Arduino_GFX* g = gfxDev();
   if (!g || !text || !text[0]) return;
-  const GFXfont* font = &MontserratBold18pt7b;
+  const GFXfont* font = &MontserratBold28pt7b;
   g->setFont(font);
+  g->setTextSize(1);
   g->setTextColor(color);
   int16_t x1 = 0, y1 = 0;
   uint16_t w = 0, h = 0;
@@ -131,6 +136,8 @@ static void formatClockTime(const struct tm& t, const Settings& s, char* out, si
 }
 
 static const GFXfont* clockTimeFont(const Settings& s) {
+  // Keep the proven 40px Montserrat bitmap on the ESP8266. The experimental
+  // 44px generated bitmap was not visually reliable on this panel.
   return s.clock.showSeconds ? &MontserratBold28pt7b : &MontserratBold40pt7b;
 }
 
@@ -149,13 +156,53 @@ static void drawWeatherMark(int cx, int cy, uint16_t code, uint16_t color) {
   Arduino_GFX* g = gfxDev();
   if (!g) return;
   const char* kind = weatherKind(code);
-  g->fillRoundRect(cx - 20, cy - 13, 40, 26, 8, UI_PANEL);
-  g->drawRoundRect(cx - 20, cy - 13, 40, 26, 8, color);
-  g->setFont(nullptr);
-  g->setTextSize(1);
-  g->setTextColor(color);
-  g->setCursor(cx - gfxTextW(kind, 1) / 2, cy - 4);
-  g->print(kind);
+  bool sunny = !strcmp(kind, "SUN") || !strcmp(kind, "PART");
+  bool wet = !strcmp(kind, "RAIN") || !strcmp(kind, "SNOW");
+  bool cloudy = !sunny || !strcmp(kind, "PART");
+  if (sunny) {
+    g->fillCircle(cx - (cloudy ? 5 : 0), cy - 2, 6, color);
+    static const int8_t rayX[8] = {0, 6, 9, 6, 0, -6, -9, -6};
+    static const int8_t rayY[8] = {-9, -6, 0, 6, 9, 6, 0, -6};
+    for (uint8_t ray = 0; ray < 8; ray++) {
+      int ox = cx - (cloudy ? 5 : 0);
+      int x1 = ox + rayX[ray];
+      int y1 = cy - 2 + rayY[ray];
+      int x2 = ox + (rayX[ray] * 4) / 3;
+      int y2 = cy - 2 + (rayY[ray] * 4) / 3;
+      g->drawLine(x1, y1, x2, y2, color);
+    }
+  }
+  if (cloudy) {
+    int ox = sunny ? 5 : 0;
+    g->fillCircle(cx - 7 + ox, cy + 3, 5, color);
+    g->fillCircle(cx + ox, cy - 1, 7, color);
+    g->fillCircle(cx + 8 + ox, cy + 3, 5, color);
+    g->fillRect(cx - 12 + ox, cy + 3, 25, 7, color);
+  }
+  if (wet) {
+    for (int drop = -1; drop <= 1; drop++) {
+      int x = cx + drop * 7;
+      if (!strcmp(kind, "SNOW")) {
+        g->drawLine(x - 2, cy + 10, x + 2, cy + 14, color);
+        g->drawLine(x + 2, cy + 10, x - 2, cy + 14, color);
+      } else {
+        g->drawLine(x, cy + 10, x - 2, cy + 15, color);
+        g->drawLine(x - 2, cy + 15, x + 2, cy + 15, color);
+      }
+    }
+  }
+}
+
+static void drawWindMark(int cx, int cy, uint16_t color) {
+  Arduino_GFX* g = gfxDev();
+  if (!g) return;
+  g->drawFastHLine(cx - 12, cy - 6, 17, color);
+  g->drawFastHLine(cx - 12, cy + 1, 12, color);
+  g->drawFastHLine(cx - 12, cy + 8, 17, color);
+  g->drawLine(cx + 5, cy - 6, cx + 10, cy - 2, color);
+  g->drawLine(cx + 10, cy - 2, cx + 5, cy + 2, color);
+  g->drawLine(cx, cy + 8, cx + 5, cy + 12, color);
+  g->drawLine(cx + 5, cy + 12, cx, cy + 16, color);
 }
 
 static void drawThermometer(int x, int y, uint16_t color) {
@@ -414,16 +461,25 @@ void ClockMode::renderInfoLine(const Settings& s) {
   char line[30];
   uint16_t color = UI_WHITE;
   if (m_infoPage == 0) {
-    if (m_weather.valid) snprintf(line, sizeof(line), "WIND %.1f KM/H", m_weather.windKph);
-    else strlcpy(line, "WIND --", sizeof(line));
+    drawWindMark(19, 40, m_weather.valid ? s.clock.accentColor : UI_MUTED);
+    if (m_weather.valid) snprintf(line, sizeof(line), "%.1f KM/H", m_weather.windKph);
+    else strlcpy(line, "-- KM/H", sizeof(line));
+    gfxPrint(39, 32, line, m_weather.valid ? s.clock.dateColor : UI_MUTED, 2);
+    return;
   } else if (m_infoPage == 1) {
     String address = netMode() == NET_AP ? "192.168.4.1" : netIP();
     snprintf(line, sizeof(line), "IP %s", address.c_str());
     color = s.clock.accentColor;
   } else {
-    if (m_weather.valid) fitUpper(m_weather.description, line, sizeof(line), 25);
-    else strlcpy(line, m_weather.error.length() ? m_weather.error.c_str() : "WEATHER CONNECTING", sizeof(line));
+    drawWeatherMark(19, 40, m_weather.valid ? m_weather.weatherCode : 0, m_weather.valid ? s.clock.accentColor : UI_MUTED);
+    if (m_weather.valid) {
+      char temp[12];
+      formatTemp(m_weather.temp, s, temp, sizeof(temp));
+      snprintf(line, sizeof(line), "%s  HUM %u%%", temp, m_weather.humidity);
+    } else strlcpy(line, "WEATHER SYNC", sizeof(line));
     color = m_weather.valid ? s.clock.dateColor : UI_MUTED;
+    gfxPrint(43, 32, line, color, 2);
+    return;
   }
   gfxPrint(10, 32, line, color, 2);
 }
@@ -471,7 +527,7 @@ void ClockMode::renderTimeOnly(const Settings& s, const struct tm& t) {
         drawClockFontInReservedArea(nextTime, 103, s.clock.timeColor);
       } else {
         g->fillRect(0, 72, 240, 62, s.clock.bgColor);
-        drawFontCentered(nextTime, 103, &MontserratBold28pt7b, s.clock.timeColor);
+        drawFontCentered(nextTime, 103, &MontserratBold40pt7b, s.clock.timeColor);
       }
       strlcpy(m_lastTime, nextTime, sizeof(m_lastTime));
     }
@@ -543,7 +599,7 @@ void ClockMode::render(const Settings& s) {
       if (timeOk) snprintf(seconds, sizeof(seconds), "%02d", t.tm_sec);
       gfxPrint(184, 91, seconds, UI_YELLOW, 3);
     } else {
-      drawFontCentered(timeStr, 103, &MontserratBold28pt7b, tc);
+      drawFontCentered(timeStr, 103, &MontserratBold40pt7b, tc);
     }
 
     if (s.clock.showDate) gfxDrawCentered(dateStr, 149, 2, dc);

@@ -9,6 +9,19 @@
 
 GalleryMode g_galleryMode;
 
+// JPEG/RAW decoding writes scanlines directly to the panel. A short backlight
+// fade hides that unavoidable SPI rasterisation without allocating a second
+// 240x240 framebuffer (which would be unsafe on the ESP8266). The panel is
+// already black while the next image is decoded, then fades back in quickly.
+static void galleryFade(uint8_t from, uint8_t to, bool inverted) {
+  static const uint8_t kSteps = 6;
+  for (uint8_t i = 0; i <= kSteps; i++) {
+    int value = from + ((int)to - (int)from) * i / kSteps;
+    gfxSetBrightness((uint8_t)constrain(value, 0, 100), inverted);
+    if (i < kSteps) delay(10);
+  }
+}
+
 static PhotoItem s_emptyPhoto = {"", 0};
 static File s_gifFile;
 static int16_t s_gifX = 0;
@@ -226,6 +239,19 @@ void GalleryMode::serviceGif() {
 }
 
 void GalleryMode::renderCurrent(const Settings& s) {
+  uint8_t restoreBrightness = gfxBrightness();
+  bool fade = restoreBrightness > 0;
+  if (fade) {
+    galleryFade(restoreBrightness, 0, s.backlightInverted);
+    delay(12);
+  }
+
+  renderCurrentNow(s);
+
+  if (fade) galleryFade(0, restoreBrightness, s.backlightInverted);
+}
+
+void GalleryMode::renderCurrentNow(const Settings& s) {
   if (m_photoCount == 0 || m_currentIdx < 0 || m_currentIdx >= m_photoCount) {
     gfxClear();
     gfxDrawCentered("NO PHOTOS", 100, 3, C_WHITE);
