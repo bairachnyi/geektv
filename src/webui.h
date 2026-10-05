@@ -153,6 +153,8 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
     <div class="chk"><input id="carouselClockTime1" type="checkbox"><label>Clock 1 — Giant</label></div>
     <div class="chk"><input id="carouselClockTime2" type="checkbox"><label>Clock 2 — Current weather</label></div>
     <div class="chk"><input id="carouselClockWeather2" type="checkbox"><label>Weather — 3-day forecast</label></div>
+    <div class="chk"><input id="carouselClockMemo" type="checkbox"><label>Office Memo — Quotes</label></div>
+    <div class="chk"><input id="carouselClockDino" type="checkbox"><label>Pixel Pet — Dino</label></div>
     <div class="chk"><input id="carouselGallery" type="checkbox"><label>Photo Gallery</label></div>
    </div>
    <small class="hint">Pick the active feature, then configure it in its own tab. Carousel rotates through the ticked features.</small>
@@ -192,6 +194,8 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
       <option value="0">Clock 1 — Giant time + date + IP</option>
       <option value="1">Clock 2 — Time + current weather</option>
       <option value="2">Weather — Today + next 2 days</option>
+      <option value="3">Office Memo — Quotes</option>
+      <option value="4">Pixel Pet — Dino</option>
      </select>
      <small class="hint">Typography and spacing are fixed per screen so the preview and the 240×240 device renderer stay aligned.</small>
     </div>
@@ -608,6 +612,8 @@ function loadConfig(){return j('/api/config').then(function(c){C=c;
   sc('carouselClockTime1',c.carouselClockTime1!==false);
   sc('carouselClockTime2',!!c.carouselClockTime2);
   sc('carouselClockWeather2',!!c.carouselClockWeather2);
+  sc('carouselClockMemo',c.carouselClockMemo!==false);
+  sc('carouselClockDino',c.carouselClockDino!==false);
   sc('carouselGallery',c.carouselGallery!==false);
   sc('carouselCodex',c.carouselCodex!==false);
   // ticker slice
@@ -679,6 +685,25 @@ function updateClockPreview(){
   ctx.textBaseline='middle';
   ctx.fillText(txt,120,yCenter);
  }
+ // Match firmware cell geometry. Browser font rasterization remains approximate;
+ // the bitmap comparison artifact is used to verify actual device glyphs.
+ function drawClockTime(txt,yCenter,px,areaX,areaW,color){
+  var cell=px===28?20:(px===54?37:28), colon=px===28?7:(px===54?14:10);
+  var digitH=px===28?21:(px===54?40:30), ascent=px===28?20:(px===54?39:29);
+  var total=0;
+  for(var i=0;i<txt.length;i++) total+=txt[i]===':'?colon:cell;
+  var x=areaX+Math.max(0,Math.floor((areaW-total)/2));
+  var baseline=yCenter+ascent-Math.floor(digitH/2);
+  ctx.save();ctx.fillStyle=color;
+  ctx.font='700 '+px+'px '+fontFamily;
+  ctx.textAlign='center';ctx.textBaseline='alphabetic';
+  for(var j=0;j<txt.length;j++){
+   var cw=txt[j]===':'?colon:cell;
+   ctx.fillText(txt[j],x+cw/2,baseline,cw);
+   x+=cw;
+  }
+  ctx.restore();
+ }
  function weatherMark(cx,cy,label,color){
   drawRRect(cx-20,cy-13,40,26,8,'#081018',color);
   drawCentered(label,cy,8,color,mono,'700');
@@ -709,34 +734,78 @@ function updateClockPreview(){
   drawText('4.1 KM/H',35,33,14,'#ffffff',mono,'700');
   drawText('☁',154,30,20,ac,mono,'700');
   if(showSec){
-   drawText('12:34',8,82,42,tc,fontFamily,'700');
+   // Match device: HH:MM in reserved area (8..164), seconds separately.
+   drawClockTime('12:34',103,28,8,156,tc);
    drawText('56',184,91,24,'#ffff00',mono,'700');
   }else{
-   // Match the proven 40px device font.
-   drawCentered('12:34',103,66,tc,fontFamily,'700');
+   // Fixed cells match the 162px-wide firmware 54pt HH:MM layout.
+   drawClockTime('12:34',103,54,0,240,tc);
   }
   if(showDt)drawCentered(dateStr,149,16,dc,mono,'700');
   ctx.strokeStyle=tc;ctx.lineWidth=2;
   ctx.strokeRect(15,177,7,18);ctx.beginPath();ctx.arc(18.5,198,6,0,Math.PI*2);ctx.stroke();
   drawText('29C',35,181,16,'#ffffff',mono,'700');
   ctx.strokeStyle=ac;ctx.beginPath();ctx.moveTo(18,207);ctx.lineTo(11,219);ctx.arc(18,220,7,Math.PI,0);ctx.closePath();ctx.stroke();
-  drawText('74%',35,211,16,'#ffffff',mono,'700');
-  [['✓','geektv','#47fc42'],['◌','dashboard','#00ffff']].forEach(function(r,i){
-   drawText(r[0],107,178+i*21,12,r[2],mono,'700');
-   drawText(r[1],126,178+i*21,8,'#ffffff',mono,'700');
-  });
+  drawText('WIFI',112,194,16,ac,mono,'700');
+  var bColor='#00ff00';
+  for(var b=1;b<=5;b++){
+   var bh=b*3+1;
+   ctx.fillStyle=bColor;
+   ctx.fillRect(172+(b-1)*6,208-bh,4,bh);
+  }
+  drawText('UP 12d 14h',112,218,16,dc,mono,'700');
  } else if(theme===1){
   drawRRect(6,6,228,78,10,'#081018',tc);
-  drawCentered(timeStr,43,showSec?34:46,tc,fontFamily,'700');
+  drawClockTime(timeStr,43,showSec?28:40,0,240,tc);
   if(showDt)drawCentered(dateStr,70,8,dc,mono,'700');
   drawRRect(6,90,228,104,10,'#081421',ac);
   drawText(city,14,100,16,'#ffffff',mono,'700');
   weatherMark(206,112,'SUN',ac);
-  drawText('29C',14,127,24,tc,mono,'700');
-  drawText('HUM 74%',122,132,8,dc,mono,'700');
-  drawText('PARTLY CLOUDY',14,163,8,'#848284',mono,'700');
+  drawText('29C',14,126,24,tc,mono,'700');
+  drawText('HUM 74%',14,158,16,dc,mono,'700');
+  drawText('PARTLY CLOUDY',14,178,8,'#848284',mono,'700');
   drawRRect(6,200,228,34,9,'#000408','#212838');
   drawCentered(ipStr,217,16,ac,mono,'700');
+ } else if(theme===3){
+  drawCentered('«Ты пропускаешь 100%',80,16,tc,mono,'700');
+  drawCentered('бросков, которые',104,16,tc,mono,'700');
+  drawCentered('не делаешь.»',128,16,tc,mono,'700');
+  drawCentered('— Майкл Скотт',160,13,dc,mono,'700');
+ } else if(theme===4){
+  drawRRect(6,6,228,32,6,'#081018','#212838');
+  drawText('12:34',14,14,16,tc,mono,'700');
+  drawText('29C',90,14,16,'#ffffff',mono,'700');
+  weatherMark(145,22,'SUN',ac);
+  var bCol='#00ff00';
+  for(var b=1;b<=5;b++){
+   var bh=b*2+2;
+   ctx.fillStyle=bCol;
+   ctx.fillRect(192+(b-1)*5,28-bh,3,bh);
+  }
+  ctx.strokeStyle='#212838';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(6,175);ctx.lineTo(234,175);ctx.stroke();
+  ctx.fillStyle='#314455';
+  ctx.beginPath();ctx.arc(180,62,7,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(190,58,9,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(202,62,7,0,Math.PI*2);ctx.fill();
+  ctx.fillRect(173,62,36,7);
+  ctx.fillStyle='#244433';
+  ctx.fillRect(25,143,6,32);ctx.fillRect(20,150,16,6);
+  ctx.fillRect(195,143,6,32);ctx.fillRect(190,150,16,6);
+  ctx.fillStyle='#47fc42';
+  ctx.fillRect(114,131,26,16);
+  ctx.fillStyle=bg;ctx.fillRect(132,133,4,4);
+  ctx.fillStyle='#47fc42';
+  ctx.fillRect(116,147,12,14);
+  ctx.fillRect(104,153,24,14);
+  ctx.fillRect(100,157,8,6);
+  ctx.fillRect(128,155,6,4);
+  ctx.fillRect(106,167,4,8);
+  ctx.fillRect(116,167,4,8);
+  drawText('<3',136,117,10,dc,mono,'700');
+  drawRRect(6,196,228,38,6,'#081018','#212838');
+  drawText('PET: CHILLING',14,206,16,tc,mono,'700');
+  drawText('LVL 99',184,210,12,ac,mono,'700');
  } else {
   var days=[
    ['TODAY','PARTLY CLOUDY','29C','27..31  H74%','SUN',tc],
@@ -809,7 +878,9 @@ function collect(){
   carouselTicker:gc('carouselTicker'), carouselGithub:gc('carouselGithub'), carouselCodex:gc('carouselCodex'),
   carouselClockTime1:gc('carouselClockTime1'), carouselClockTime2:gc('carouselClockTime2'),
   carouselClockWeather2:gc('carouselClockWeather2'),
-  carouselClock:gc('carouselClockTime1')||gc('carouselClockTime2')||gc('carouselClockWeather2'),
+  carouselClockMemo:gc('carouselClockMemo'),
+  carouselClockDino:gc('carouselClockDino'),
+  carouselClock:gc('carouselClockTime1')||gc('carouselClockTime2')||gc('carouselClockWeather2')||gc('carouselClockMemo')||gc('carouselClockDino'),
   carouselGallery:gc('carouselGallery'),
   brightness:parseInt(gv('brightness'))||0,
   rotation:parseInt(gv('rotation')),

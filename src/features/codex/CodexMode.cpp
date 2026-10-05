@@ -11,18 +11,18 @@ static void drawMontserratCentered(const char* txt, int yCenter, const GFXfont* 
   Arduino_GFX* g = gfxDev();
   if (!g || !txt || !txt[0]) return;
 
-  g->setFont((GFXfont*)font);
+  g->setFont(font);
+  g->setTextSize(1);
+  g->setTextWrap(false);
   g->setTextColor(color);
 
   int16_t x1 = 0, y1 = 0;
   uint16_t w = 0, h = 0;
-  g->getTextBounds((char*)txt, 0, 0, &x1, &y1, &w, &h);
+  g->getTextBounds(txt, 0, 0, &x1, &y1, &w, &h);
 
-  int x = (240 - (int)w) / 2;
-  if (x < 0) x = 0;
-
-  int yBase = yCenter + (int)h / 2 - (int)y1 / 2;
-  g->setCursor(x, yBase);
+  int x = max(0, (240 - (int)w) / 2 - (int)x1);
+  int baseline = yCenter - ((int)y1 + (int)h / 2);
+  g->setCursor(x, baseline);
   g->print(txt);
 }
 

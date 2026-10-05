@@ -151,7 +151,7 @@ struct Settings {
   uint16_t carouselSec;
   bool carouselTicker, carouselGithub, carouselClock, carouselGallery, carouselCodex;
   // Current clock screens. The old fields below remain only for config migration.
-  bool carouselClockTime1, carouselClockTime2, carouselClockWeather2;
+  bool carouselClockTime1, carouselClockTime2, carouselClockWeather2, carouselClockMemo, carouselClockDino;
   bool carouselClockTime3, carouselClockWeather1;
   // Legacy aliases (read/mirrored for one release).
   bool carouselClockDigital, carouselClockWeather, carouselClockModern, carouselClockForecast;

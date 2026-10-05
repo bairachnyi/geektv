@@ -170,8 +170,8 @@ const DEVICE_PREVIEW_JS = String.raw`
      '</div>'+
      '<div style="background:#000;height:52px;display:flex;align-items:center;position:relative;overflow:hidden">'+
       '<b style="font-family:ui-monospace,monospace;font-size:16px;color:'+ac+';margin-left:4px">192.168.1.50</b>'+
-      '<span style="position:absolute;right:2px;bottom:1px;width:122px;color:#fff;font:14px ui-monospace,monospace;line-height:23px">'+
-       '<span style="display:block"><i style="color:#59ef9a;font-style:normal">✓</i> geektv</span><span style="display:block"><i style="color:#39e7ff;font-style:normal">◌</i> dashboard</span>'+
+      '<span style="position:absolute;right:2px;bottom:1px;width:122px;font:700 14px ui-monospace,monospace;line-height:23px">'+
+       '<span style="display:flex;align-items:flex-end;gap:2px;color:'+ac+'">WIFI <span style="display:inline-flex;align-items:flex-end;gap:2px;margin-left:6px;height:16px"><i style="width:4px;height:4px;background:#00ff00;border-radius:1px;display:inline-block"></i><i style="width:4px;height:7px;background:#00ff00;border-radius:1px;display:inline-block"></i><i style="width:4px;height:10px;background:#00ff00;border-radius:1px;display:inline-block"></i><i style="width:4px;height:13px;background:#00ff00;border-radius:1px;display:inline-block"></i><i style="width:4px;height:16px;background:#00ff00;border-radius:1px;display:inline-block"></i></span></span><span style="display:block;color:'+dc+'">UP 12d 14h</span>'+
       '</span>'+
      '</div>'+
     '</div>';

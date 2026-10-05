@@ -75,7 +75,8 @@ static bool carouselHas(const Settings& s, const DisplayMode* m) {
     case MODE_CODEX:   return s.carouselCodex;
     case MODE_CLOCK:   return s.carouselClock || s.carouselClockTime1 || s.carouselClockTime2 || s.carouselClockWeather2 ||
                               s.carouselClockTime3 || s.carouselClockWeather1 || s.carouselClockDigital ||
-                              s.carouselClockWeather || s.carouselClockModern || s.carouselClockForecast;
+                              s.carouselClockWeather || s.carouselClockModern || s.carouselClockForecast ||
+                              s.carouselClockMemo || s.carouselClockDino;
     case MODE_GALLERY: return s.carouselGallery;
     default:           return true;
   }
@@ -86,17 +87,21 @@ static uint8_t carouselClockCount(const Settings& s) {
   return (uint8_t)((s.carouselClockTime1 || s.carouselClockDigital) ? 1 : 0)
        + (uint8_t)((s.carouselClockTime2 || s.carouselClockTime3 || s.carouselClockWeather1 ||
                     s.carouselClockWeather || s.carouselClockModern) ? 1 : 0)
-       + (uint8_t)((s.carouselClockWeather2 || s.carouselClockForecast) ? 1 : 0);
+       + (uint8_t)((s.carouselClockWeather2 || s.carouselClockForecast) ? 1 : 0)
+       + (uint8_t)(s.carouselClockMemo ? 1 : 0)
+       + (uint8_t)(s.carouselClockDino ? 1 : 0);
 }
 
 // Return the Nth enabled clock screen (0=giant clock, 1=clock + weather,
-// 2=three-day forecast). Legacy switches map to their closest current screen.
+// 2=three-day forecast, 3=office memo, 4=dino pet). Legacy switches map to their closest current screen.
 static uint8_t carouselClockThemeAt(const Settings& s, uint8_t n) {
   uint8_t cur = 0;
   if (s.carouselClockTime1 || s.carouselClockDigital)  { if (n == cur) return 0; cur++; }
   if (s.carouselClockTime2 || s.carouselClockTime3 || s.carouselClockWeather1 ||
       s.carouselClockWeather || s.carouselClockModern) { if (n == cur) return 1; cur++; }
   if (s.carouselClockWeather2 || s.carouselClockForecast) { if (n == cur) return 2; cur++; }
+  if (s.carouselClockMemo) { if (n == cur) return 3; cur++; }
+  if (s.carouselClockDino) { if (n == cur) return 4; cur++; }
   return 0;  // fallback: Time 1
 }
 
@@ -130,6 +135,11 @@ static void carouselNext(Settings& s) {
         g_carClockThemeIdx = 0;
         s.clock.theme = carouselClockThemeAt(s, 0);
       }
+      kModes[cand]->wake(s);
+    } else if (kModes[cand]->modeConst() == MODE_CLOCK) {
+      // Wrapped back to clock as the only carousel candidate: re-apply theme 0
+      g_carClockThemeIdx = 0;
+      s.clock.theme = carouselClockThemeAt(s, 0);
       kModes[cand]->wake(s);
     }
     return;
@@ -211,6 +221,7 @@ const char* appResetReason() { return g_resetReason.c_str(); }
 // Called by the web portal after settings are applied: re-init every mode and
 // force a fresh repaint so a mode/URL/symbol change takes effect immediately.
 void appInvalidate() {
+  g_carSwitch = millis();
   for (size_t i = 0; i < kModeCount; i++) kModes[i]->invalidate(g_settings);
   DisplayMode* m = activeMode(g_settings);
   if (m) m->wake(g_settings);
