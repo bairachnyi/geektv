@@ -352,7 +352,6 @@ void Settings::setDefaults() {
   carouselClockTime1 = true;
   carouselClockTime2 = false;
   carouselClockWeather2 = false;
-  carouselClockMemo = true;
   carouselClockDino = true;
   carouselClockTime3 = carouselClockWeather1 = false;
   carouselClockDigital = true;
@@ -455,7 +454,6 @@ void settingsToJson(const Settings& s, JsonObject root, bool includeSecrets) {
   root["carouselClockTime1"]       = s.carouselClockTime1;
   root["carouselClockTime2"]       = s.carouselClockTime2;
   root["carouselClockWeather2"]    = s.carouselClockWeather2;
-  root["carouselClockMemo"]        = s.carouselClockMemo;
   root["carouselClockDino"]        = s.carouselClockDino;
   // Compatibility mirrors for one downgrade window. Keep them synchronized
   // with the canonical three-screen model so an old value cannot resurrect a
@@ -558,7 +556,6 @@ void settingsApplyJson(Settings& s, JsonObjectConst root) {
     if (s.carouselClockWeather1) s.carouselClockTime2 = true;
   }
   if (root["carouselClockWeather2"].is<bool>()) s.carouselClockWeather2 = root["carouselClockWeather2"];
-  if (root["carouselClockMemo"].is<bool>()) s.carouselClockMemo = root["carouselClockMemo"];
   if (root["carouselClockDino"].is<bool>()) s.carouselClockDino = root["carouselClockDino"];
   if (!root["carouselClockTime1"].is<bool>() && root["carouselClockDigital"].is<bool>())
     s.carouselClockTime1 = root["carouselClockDigital"];

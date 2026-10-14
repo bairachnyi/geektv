@@ -76,7 +76,7 @@ static bool carouselHas(const Settings& s, const DisplayMode* m) {
     case MODE_CLOCK:   return s.carouselClock || s.carouselClockTime1 || s.carouselClockTime2 || s.carouselClockWeather2 ||
                               s.carouselClockTime3 || s.carouselClockWeather1 || s.carouselClockDigital ||
                               s.carouselClockWeather || s.carouselClockModern || s.carouselClockForecast ||
-                              s.carouselClockMemo || s.carouselClockDino;
+                              s.carouselClockDino;
     case MODE_GALLERY: return s.carouselGallery;
     default:           return true;
   }
@@ -88,19 +88,17 @@ static uint8_t carouselClockCount(const Settings& s) {
        + (uint8_t)((s.carouselClockTime2 || s.carouselClockTime3 || s.carouselClockWeather1 ||
                     s.carouselClockWeather || s.carouselClockModern) ? 1 : 0)
        + (uint8_t)((s.carouselClockWeather2 || s.carouselClockForecast) ? 1 : 0)
-       + (uint8_t)(s.carouselClockMemo ? 1 : 0)
        + (uint8_t)(s.carouselClockDino ? 1 : 0);
 }
 
 // Return the Nth enabled clock screen (0=giant clock, 1=clock + weather,
-// 2=three-day forecast, 3=office memo, 4=dino pet). Legacy switches map to their closest current screen.
+// 2=three-day forecast, 4=dino pet). Legacy switches map to their closest current screen.
 static uint8_t carouselClockThemeAt(const Settings& s, uint8_t n) {
   uint8_t cur = 0;
   if (s.carouselClockTime1 || s.carouselClockDigital)  { if (n == cur) return 0; cur++; }
   if (s.carouselClockTime2 || s.carouselClockTime3 || s.carouselClockWeather1 ||
       s.carouselClockWeather || s.carouselClockModern) { if (n == cur) return 1; cur++; }
   if (s.carouselClockWeather2 || s.carouselClockForecast) { if (n == cur) return 2; cur++; }
-  if (s.carouselClockMemo) { if (n == cur) return 3; cur++; }
   if (s.carouselClockDino) { if (n == cur) return 4; cur++; }
   return 0;  // fallback: Time 1
 }

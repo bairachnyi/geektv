@@ -45,7 +45,6 @@ private:
   void renderTimeOnly(const Settings& s, const struct tm& t);
   void renderInfoLine(const Settings& s);
   void renderSystemSummary(const Settings& s);
-  void renderOfficeMemo(const Settings& s);
   void renderDinoPet(const Settings& s);
   void renderDinoAnim(const Settings& s);
 
@@ -59,7 +58,6 @@ private:
   uint8_t     m_infoPage = 0;
   uint32_t    m_nextInfoPageMs = 0;
   uint32_t    m_nextSysUpdateMs = 0;
-  uint16_t    m_quoteIdx = 0;
   uint8_t     m_dinoFrame = 0;
   uint32_t    m_nextDinoAnimMs = 0;
 };

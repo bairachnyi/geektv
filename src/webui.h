@@ -153,7 +153,6 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
     <div class="chk"><input id="carouselClockTime1" type="checkbox"><label>Clock 1 — Giant</label></div>
     <div class="chk"><input id="carouselClockTime2" type="checkbox"><label>Clock 2 — Current weather</label></div>
     <div class="chk"><input id="carouselClockWeather2" type="checkbox"><label>Weather — 3-day forecast</label></div>
-    <div class="chk"><input id="carouselClockMemo" type="checkbox"><label>Office Memo — Quotes</label></div>
     <div class="chk"><input id="carouselClockDino" type="checkbox"><label>Pixel Pet — Dino</label></div>
     <div class="chk"><input id="carouselGallery" type="checkbox"><label>Photo Gallery</label></div>
    </div>
@@ -194,7 +193,6 @@ small.hint{display:block;color:var(--mut);margin-top:4px;font-size:12px}
       <option value="0">Clock 1 — Giant time + date + IP</option>
       <option value="1">Clock 2 — Time + current weather</option>
       <option value="2">Weather — Today + next 2 days</option>
-      <option value="3">Office Memo — Quotes</option>
       <option value="4">Pixel Pet — Dino</option>
      </select>
      <small class="hint">Typography and spacing are fixed per screen so the preview and the 240×240 device renderer stay aligned.</small>
@@ -612,7 +610,6 @@ function loadConfig(){return j('/api/config').then(function(c){C=c;
   sc('carouselClockTime1',c.carouselClockTime1!==false);
   sc('carouselClockTime2',!!c.carouselClockTime2);
   sc('carouselClockWeather2',!!c.carouselClockWeather2);
-  sc('carouselClockMemo',c.carouselClockMemo!==false);
   sc('carouselClockDino',c.carouselClockDino!==false);
   sc('carouselGallery',c.carouselGallery!==false);
   sc('carouselCodex',c.carouselCodex!==false);
@@ -766,11 +763,6 @@ function updateClockPreview(){
   drawText('PARTLY CLOUDY',14,178,8,'#848284',mono,'700');
   drawRRect(6,200,228,34,9,'#000408','#212838');
   drawCentered(ipStr,217,16,ac,mono,'700');
- } else if(theme===3){
-  drawCentered('«Ты пропускаешь 100%',80,16,tc,mono,'700');
-  drawCentered('бросков, которые',104,16,tc,mono,'700');
-  drawCentered('не делаешь.»',128,16,tc,mono,'700');
-  drawCentered('— Майкл Скотт',160,13,dc,mono,'700');
  } else if(theme===4){
   drawRRect(6,6,228,32,6,'#081018','#212838');
   drawText('12:34',14,14,16,tc,mono,'700');
@@ -878,9 +870,8 @@ function collect(){
   carouselTicker:gc('carouselTicker'), carouselGithub:gc('carouselGithub'), carouselCodex:gc('carouselCodex'),
   carouselClockTime1:gc('carouselClockTime1'), carouselClockTime2:gc('carouselClockTime2'),
   carouselClockWeather2:gc('carouselClockWeather2'),
-  carouselClockMemo:gc('carouselClockMemo'),
   carouselClockDino:gc('carouselClockDino'),
-  carouselClock:gc('carouselClockTime1')||gc('carouselClockTime2')||gc('carouselClockWeather2')||gc('carouselClockMemo')||gc('carouselClockDino'),
+  carouselClock:gc('carouselClockTime1')||gc('carouselClockTime2')||gc('carouselClockWeather2')||gc('carouselClockDino'),
   carouselGallery:gc('carouselGallery'),
   brightness:parseInt(gv('brightness'))||0,
   rotation:parseInt(gv('rotation')),

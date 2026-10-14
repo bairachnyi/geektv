@@ -4,8 +4,6 @@
 #include "Clock.h"
 #include "Platform.h"
 #include "MontserratBold.h"
-#include "OfficeQuotes.h"
-#include "CyrillicFont8x14.h"
 #include <ArduinoJson.h>
 #include <Arduino_GFX_Library.h>
 
@@ -353,9 +351,6 @@ void ClockMode::invalidate(const Settings& s) {
 }
 
 void ClockMode::wake(const Settings& s) {
-  if (s.clock.theme == 3) {
-    m_quoteIdx++;
-  }
   m_lastTick = -1;
   m_lastYday = -1;
   m_lastTheme = 0xFF;
@@ -628,154 +623,6 @@ void ClockMode::renderSystemSummary(const Settings& s) {
   else if (d > 0) snprintf(upStr, sizeof(upStr), "UP %ud %02uh", (unsigned)d, (unsigned)h);
   else snprintf(upStr, sizeof(upStr), "UP %uh %02um", (unsigned)h, (unsigned)m);
   gfxPrint(112, 218, upStr, s.clock.dateColor, 2);
-}
-
-// UTF-8 decoding and Cyrillic/ASCII mixed text rendering (8x14 glyphs)
-static uint32_t utf8NextCodepoint(const char*& p) {
-  if (!p || !*p) return 0;
-  uint8_t c = (uint8_t)*p++;
-  if (c < 0x80) return c;
-  if ((c & 0xE0) == 0xC0) {
-    uint8_t c2 = (uint8_t)*p++;
-    return ((c & 0x1F) << 6) | (c2 & 0x3F);
-  }
-  if ((c & 0xF0) == 0xE0) {
-    uint8_t c2 = (uint8_t)*p++;
-    uint8_t c3 = (uint8_t)*p++;
-    return ((c & 0x0F) << 12) | ((c2 & 0x3F) << 6) | (c3 & 0x3F);
-  }
-  return c;
-}
-
-static size_t utf8CharCount(const char* s) {
-  size_t count = 0;
-  const char* p = s;
-  while (*p) {
-    utf8NextCodepoint(p);
-    count++;
-  }
-  return count;
-}
-
-static void drawCyrillicChar(int x, int y, uint32_t cp, uint16_t color, uint8_t size = 1) {
-  Arduino_GFX* g = gfxDev();
-  if (!g) return;
-
-  int idx = cyrillicGlyphIndex(cp);
-  if (idx >= 0) {
-    // 8x14 Cyrillic bitmap from CYRILLIC_FONT_8X14
-    for (int r = 0; r < 14; r++) {
-      uint8_t rowByte = pgm_read_byte(&CYRILLIC_FONT_8X14[idx][r]);
-      for (int c = 0; c < 8; c++) {
-        if (rowByte & (0x80 >> c)) {
-          if (size == 1) g->drawPixel(x + c, y + r, color);
-          else g->fillRect(x + c * size, y + r * size, size, size, color);
-        }
-      }
-    }
-  } else if (cp < 0x80) {
-    // Standard ASCII character: draw using built-in font scaled to match
-    g->setFont(nullptr);
-    g->setTextSize(size);
-    g->setTextColor(color);
-    g->setCursor(x, y + 3 * size); // align with 14px height
-    char ch = (char)cp;
-    g->print(ch);
-  }
-}
-
-static void drawUtf8String(int x, int y, const char* s, uint16_t color, uint8_t size = 1) {
-  const char* p = s;
-  int curX = x;
-  int charAdvance = 8 * size;
-  while (*p) {
-    uint32_t cp = utf8NextCodepoint(p);
-    drawCyrillicChar(curX, y, cp, color, size);
-    curX += charAdvance;
-  }
-}
-
-void ClockMode::renderOfficeMemo(const Settings& s) {
-  Arduino_GFX* g = gfxDev();
-  if (!g) return;
-
-  uint16_t bg = s.clock.bgColor;
-  uint16_t tc = s.clock.timeColor;
-  uint16_t dc = s.clock.dateColor;
-
-  g->fillScreen(bg);
-
-  size_t qCount = OFFICE_QUOTES_COUNT;
-  if (!qCount) return;
-  size_t idx = m_quoteIdx % qCount;
-  const char* qTextP = (const char*)pgm_read_ptr(&OFFICE_QUOTES[idx].text);
-  const char* qAuthorP = (const char*)pgm_read_ptr(&OFFICE_QUOTES[idx].author);
-
-  char words[450];
-  strncpy_P(words, qTextP, sizeof(words) - 1);
-  words[sizeof(words) - 1] = '\0';
-
-  char authorName[64];
-  strncpy_P(authorName, qAuthorP, sizeof(authorName) - 1);
-  authorName[sizeof(authorName) - 1] = '\0';
-
-  size_t charCount = utf8CharCount(words);
-  // In 240px width:
-  // With 8px glyph width: size 1 = 8px/char -> up to 28 chars/line
-  // With size 2: 16px/char -> up to 14 chars/line (only for very short quotes <= 45 chars)
-  uint8_t fontSz = (charCount <= 45) ? 2 : 1;
-  size_t maxChars = (fontSz == 2) ? 14 : 26;
-  int charW = 8 * fontSz;
-  int lineH = (fontSz == 2) ? 20 : 16;
-
-  char lines[12][96];
-  uint8_t lineCount = 0;
-  char curLine[96] = "";
-
-  char* p = strtok(words, " ");
-  while (p && lineCount < 10) {
-    size_t wordLen = utf8CharCount(p);
-    size_t curLen = utf8CharCount(curLine);
-    if (curLen == 0) {
-      strlcpy(curLine, p, sizeof(curLine));
-    } else if (curLen + 1 + wordLen <= maxChars) {
-      strlcat(curLine, " ", sizeof(curLine));
-      strlcat(curLine, p, sizeof(curLine));
-    } else {
-      strlcpy(lines[lineCount++], curLine, sizeof(lines[0]));
-      strlcpy(curLine, p, sizeof(curLine));
-    }
-    p = strtok(nullptr, " ");
-  }
-  if (curLine[0] && lineCount < 10) {
-    strlcpy(lines[lineCount++], curLine, sizeof(lines[0]));
-  }
-
-  char authorBuf[80];
-  snprintf(authorBuf, sizeof(authorBuf), "— %s", authorName);
-
-  uint8_t authorSz = 1;
-  int authorLineH = 14;
-  int gap = (fontSz == 2) ? 16 : 12;
-  int totalH = lineCount * lineH + gap + authorLineH;
-
-  int startY = (240 - totalH) / 2;
-  if (startY < 10) startY = 10;
-
-  // Render centered quote lines
-  for (uint8_t i = 0; i < lineCount; i++) {
-    int w = utf8CharCount(lines[i]) * charW;
-    int x = (240 - w) / 2;
-    if (x < 4) x = 4;
-    drawUtf8String(x, startY + i * lineH, lines[i], tc, fontSz);
-  }
-
-  // Render centered author line
-  int authorW = utf8CharCount(authorBuf) * (8 * authorSz);
-  int authorX = (240 - authorW) / 2;
-  if (authorX < 4) authorX = 4;
-  int authorY = startY + lineCount * lineH + gap;
-  drawUtf8String(authorX, authorY, authorBuf, dc, authorSz);
 }
 
 // ---------------------------------------------------------------------------
@@ -1311,9 +1158,6 @@ void ClockMode::render(const Settings& s) {
     gfxFillRoundRect(6, 200, 228, 34, 9, UI_DARK);
     gfxDrawRoundRect(6, 200, 228, 34, 9, UI_BORDER);
     gfxDrawCentered(ip, 211, 2, ac);
-  } else if (s.clock.theme == 3) {
-    // Screen 4: Office Memo / Dunder Mifflin quotes
-    renderOfficeMemo(s);
   } else if (s.clock.theme == 4) {
     // Screen 5: Pixel Pet / Dino Tamagotchi
     renderDinoPet(s);
