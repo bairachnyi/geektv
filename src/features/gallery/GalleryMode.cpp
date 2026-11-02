@@ -1,4 +1,5 @@
 #include "GalleryMode.h"
+#include "Platform.h"
 #include "Gfx.h"
 #include "Net.h"
 #include <LittleFS.h>
@@ -194,6 +195,9 @@ void GalleryMode::closeGif() {
 bool GalleryMode::openGif(const String& path) {
   closeGif();
   gfxClear();
+#if defined(SMALLTV_ESP8266)
+  if (ESP.getFreeHeap() < 9000 || platformMaxFreeBlock() < sizeof(AnimatedGIF) + 512) return false;
+#endif
   m_gif = new (std::nothrow) AnimatedGIF();
   if (!m_gif) return false;
   m_gif->begin(LITTLE_ENDIAN_PIXELS);
@@ -213,26 +217,16 @@ bool GalleryMode::openGif(const String& path) {
 void GalleryMode::serviceGif() {
   if (!m_gifActive || (int32_t)(millis() - m_nextGifFrameMs) < 0) return;
   int32_t delayMs = 0;
-  bool frameOk = false;
+  int rc = -1;
   if (m_gif) {
     gfxBeginBitmapBatch();
-    frameOk = m_gif->playFrame(false, &delayMs);
+    rc = m_gif->playFrame(false, &delayMs);
     gfxEndBitmapBatch();
   }
-  if (!frameOk) {
+  if (rc <= 0 && m_gif) {
     // Loop the same file until galleryRotateSec advances to the next item.
-    String path = m_photos[m_currentIdx].name;
-    closeGif();
-    m_gif = new (std::nothrow) AnimatedGIF();
-    if (!m_gif) return;
-    m_gif->begin(LITTLE_ENDIAN_PIXELS);
-    if (!m_gif->open(path.c_str(), gifOpenFile, gifCloseFile, gifReadFile, gifSeekFile, gifDrawLine)) {
-      delete m_gif;
-      m_gif = nullptr;
-      return;
-    }
-    m_gifActive = true;
-    delayMs = 20;
+    m_gif->reset();
+    if (rc < 0) delayMs = 20;
   }
   if (delayMs < 20) delayMs = 20;
   m_nextGifFrameMs = millis() + (uint32_t)delayMs;

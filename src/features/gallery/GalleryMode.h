@@ -21,13 +21,13 @@ public:
 
   uint8_t photoCount() const { return m_photoCount; }
   const PhotoItem& photoAt(uint8_t idx) const;
+  void closeGif();
 
 private:
   void scanPhotos();
   void nextPhoto(const Settings& s);
   void renderCurrent(const Settings& s);
   void renderCurrentNow(const Settings& s);
-  void closeGif();
   bool openGif(const String& path);
   void serviceGif();
 

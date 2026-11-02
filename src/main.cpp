@@ -127,6 +127,9 @@ static void carouselNext(Settings& s) {
     size_t cand = (g_carIdx + hop) % kModeCount;
     if (!carouselHas(s, kModes[cand])) continue;
     if (cand != g_carIdx) {
+#if WITH_GALLERY
+      if (kModes[g_carIdx]->modeConst() == MODE_GALLERY) g_galleryMode.closeGif();
+#endif
       g_carIdx = cand;
       // When landing on clock, apply the first enabled carousel theme.
       if (kModes[cand]->modeConst() == MODE_CLOCK) {

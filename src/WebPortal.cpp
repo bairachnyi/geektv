@@ -10,6 +10,9 @@
 #include "GithubClient.h"
 #include "features/codex/CodexClient.h"
 #include "Clock.h"
+#if WITH_GALLERY
+#include "GalleryMode.h"
+#endif
 
 // Defined in main.cpp — re-init every mode + force a repaint after a config change.
 extern void appInvalidate();
@@ -212,6 +215,9 @@ static void handlePostConfig() {
   if (!requireAuth()) return;
   if (!server.hasArg("plain")) { server.send(400, "text/plain", "no body"); return; }
   if (server.arg("plain").length() > 8192) { server.send(413, "text/plain", "payload too large"); return; }
+#if WITH_GALLERY
+  g_galleryMode.closeGif();
+#endif
 
   JsonDocument doc;
   if (deserializeJson(doc, server.arg("plain"))) {
@@ -350,6 +356,9 @@ static void handleUpdateDone() {
 static void handleUpdateUpload() {
   HTTPUpload& up = server.upload();
   if (up.status == UPLOAD_FILE_START) {
+#if WITH_GALLERY
+    g_galleryMode.closeGif();
+#endif
 #if defined(SMALLTV_ESP8266)
     WiFiUDP::stopAll();   // free UDP sockets so the OTA has max contiguous flash/heap
 #endif
@@ -448,6 +457,9 @@ static void handlePhotoUpload() {
   if (!checkAuth()) return;
   HTTPUpload& up = server.upload();
   if (up.status == UPLOAD_FILE_START) {
+#if WITH_GALLERY
+    g_galleryMode.closeGif();
+#endif
     s_uploadOk = false;
     s_uploadBytes = 0;
     s_uploadError = "";
