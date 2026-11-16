@@ -1,0 +1,169 @@
+--- src/features/clock/ClockMode.cpp
++++ src/features/clock/ClockMode.cpp
+@@ -199,35 +199,6 @@
+   }
+ }
+ 
+-static const char* compactRepo(const char* repo) {
+-  const char* slash = strchr(repo, '/');
+-  return slash ? slash + 1 : repo;
+-}
+-
+-static void clockMarquee(const char* source, char* out, size_t outLen,
+-                         uint8_t windowWidth, uint16_t frame) {
+-  size_t len = strlen(source);
+-  if (len <= windowWidth) {
+-    strlcpy(out, source, outLen);
+-    return;
+-  }
+-  size_t totalAnimLen = len + 3; // +3 for spacing
+-  uint16_t step = frame % totalAnimLen;
+-  
+-  for (uint8_t i = 0; i < windowWidth && i < outLen - 1; i++) {
+-    size_t pos = (step + i) % totalAnimLen;
+-    if (pos >= len) out[i] = ' ';
+-    else out[i] = source[pos];
+-  }
+-  out[windowWidth < outLen - 1 ? windowWidth : outLen - 1] = '\0';
+-}
+-
+-static void drawCompactGithubIcon(Arduino_GFX* g, int x, int y, const GithubRun& run, uint16_t frame) {
+-  uint16_t c = (run.status == 2) ? UI_RED : (run.status == 1 ? UI_GREEN : UI_YELLOW);
+-  if (run.status == 0 && (frame % 2) == 0) c = UI_MUTED;
+-  g->fillRect(x, y, 6, 6, c);
+-}
+-
+ static void fitUpper(const String& inStr, char* out, size_t outSize, size_t maxLen) {
+   size_t len = min(inStr.length(), maxLen);
+   size_t i = 0, o = 0;
+@@ -374,33 +345,33 @@
+ }
+ 
+ void ClockMode::begin(const Settings&) {
+   m_weather = WeatherData();
+   m_nextFetchMs = millis();
+   m_lastTick = -1;
+   m_lastYday = -1;
+   m_lastTheme = 0xFF;
+   m_lastTime[0] = '\0';
+   m_fullRepaint = true;
+   m_infoPage = 0;
+   m_nextInfoPageMs = 0;
+-  m_lastGithubRevision = UINT32_MAX;
+-  m_nextGithubFrameMs = 0;
+-  m_githubFrame = 0;
++  m_nextSysUpdateMs = 0;
+ }
+ 
+ void ClockMode::invalidate(const Settings& s) {
+   m_nextFetchMs = millis();
+   m_lastTick = -1;
+   m_lastYday = -1;
+   m_lastTheme = 0xFF;
+   m_lastTime[0] = '\0';
+   m_fullRepaint = true;
+   m_infoPage = 0;
+   m_nextInfoPageMs = 0;
+-  m_lastGithubRevision = UINT32_MAX;
+-  m_nextGithubFrameMs = 0;
+-  m_githubFrame = 0;
++  m_nextSysUpdateMs = 0;
+   render(s);
+ }
+ 
+ void ClockMode::wake(const Settings& s) {
+   m_nextFetchMs = millis();
+   m_lastTick = -1;
+   m_lastYday = -1;
+   m_lastTheme = 0xFF;
+   m_lastTime[0] = '\0';
+   m_fullRepaint = true;
+   m_infoPage = 0;
+   m_nextInfoPageMs = 0;
+-  m_lastGithubRevision = UINT32_MAX;
+-  m_nextGithubFrameMs = 0;
+-  m_githubFrame = 0;
++  m_nextSysUpdateMs = 0;
+   render(s);
+ }
+ 
+@@ -561,15 +532,9 @@
+     return;
+   }
+ 
+-  if (s.github.statusUrl.length() >= 8) githubService(s);
+-  const GithubData& github = githubGet();
+-  bool githubChanged = github.revision != m_lastGithubRevision;
+-  if (s.clock.theme == 0 &&
+-      (githubChanged || (int32_t)(nowMs - m_nextGithubFrameMs) >= 0)) {
+-    m_lastGithubRevision = github.revision;
+-    m_githubFrame++;
+-    renderGithubSummary(s);
+-    m_nextGithubFrameMs = nowMs + 1000UL;
++  if (s.clock.theme == 0 && (int32_t)(nowMs - m_nextSysUpdateMs) >= 0) {
++    renderSystemSummary(s);
++    m_nextSysUpdateMs = nowMs + 10000UL;
+   }
+   if (s.clock.theme == 0 && (int32_t)(nowMs - m_nextInfoPageMs) >= 0) {
+     m_infoPage = (uint8_t)((m_infoPage + 1) % 3);
+@@ -628,34 +593,20 @@
+   gfxPrint(10, 32, line, color, 2);
+ }
+ 
+-void ClockMode::renderGithubSummary(const Settings& s) {
++void ClockMode::renderSystemSummary(const Settings& s) {
+   if (s.clock.theme != 0) return;
+   Arduino_GFX* g = gfxDev();
+   if (!g) return;
+   g->fillRect(104, 176, 136, 64, s.clock.bgColor);
+ 
+-  const GithubData& data = githubGet();
+-  if (s.github.statusUrl.length() < 8) {
+-    gfxPrint(112, 199, "GH NOT SET", UI_MUTED, 1);
+-    return;
+-  }
+-  if (!data.valid || !data.runCount) {
+-    gfxPrint(112, 199, data.error ? "GH ERROR" : "GH SYNC...", data.error ? UI_RED : UI_MUTED, 1);
+-    return;
+-  }
+-
+-  uint8_t count = min<uint8_t>(2, data.runCount);
+-  for (uint8_t i = 0; i < count; i++) {
+-    const GithubRun& run = data.runs[i];
+-    int y = 191 + i * 30;
+-    drawCompactGithubIcon(g, 113, y, run, m_githubFrame + i * 3);
+-
+-    char repo[10];
+-    clockMarquee(compactRepo(run.repo), repo, sizeof(repo), 9, m_githubFrame + i * 3);
+-    gfxPrint(126, y - 8, repo, UI_WHITE, 2);
+-  }
++  // WiFi
++  char wifiStr[16];
++  if (netConnected()) snprintf(wifiStr, sizeof(wifiStr), "WIFI %d", netRSSI());
++  else strlcpy(wifiStr, "OFFLINE", sizeof(wifiStr));
++  gfxPrint(112, 194, wifiStr, netConnected() ? s.clock.accentColor : UI_MUTED, 2);
++
++  // Uptime
++  uint32_t up = millis() / 1000;
++  uint32_t d = up / 86400;
++  uint32_t h = (up % 86400) / 3600;
++  uint32_t m = (up % 3600) / 60;
++  char upStr[16];
++  if (d > 0) snprintf(upStr, sizeof(upStr), "UP %ud %02uh", (unsigned)d, (unsigned)h);
++  else snprintf(upStr, sizeof(upStr), "UP %uh %02um", (unsigned)h, (unsigned)m);
++  gfxPrint(112, 218, upStr, s.clock.dateColor, 2);
+ }
+ 
+ void ClockMode::renderTimeOnly(const Settings& s, const struct tm& t) {
+@@ -772,10 +723,8 @@
+       gfxPrint(10, 212, "HUM --", UI_MUTED, 2);
+     }
+ 
+-    m_lastGithubRevision = UINT32_MAX;
+-    m_githubFrame = 0;
+-    renderGithubSummary(s);
+-    m_nextGithubFrameMs = millis() + 1000UL;
++    renderSystemSummary(s);
++    m_nextSysUpdateMs = millis() + 10000UL;
+   } else if (s.clock.theme == 1) {
+     // Screen 2: clock + current weather + location + humidity + date + IP.

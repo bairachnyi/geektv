@@ -1,0 +1,303 @@
+diff --git a/src/features/clock/ClockMode.cpp b/src/features/clock/ClockMode.cpp
+index a73d02a..936742c 100644
+--- a/src/features/clock/ClockMode.cpp
++++ b/src/features/clock/ClockMode.cpp
+@@ -21,41 +21,183 @@ static const uint16_t UI_GREEN      = 0x47E8;
+ static const uint16_t UI_RED        = 0xF800;
+ static const uint16_t UI_YELLOW     = 0xFFE0;
+ 
+-static void drawFontCentered(const char* txt, int yCenter, const GFXfont* font, uint16_t color) {
++// ---------------------------------------------------------------------------
++// Fixed-cell digit rendering.
++//
++// Proportional fonts like Montserrat Bold give each digit a different bitmap
++// width (e.g. "1" is 11 px while "0" is 19 px at 28pt).  Centering by the
++// *current* text bounds therefore shifts the string left/right whenever a
++// narrow digit replaces a wide one (09→10, 19→20, 23→00, …).
++//
++// The single drawFixedDigits() helper renders every digit and dash character
++// inside a fixed-width cell derived from the widest digit bitmap.  Only ':'
++// keeps its natural advance.  The result is a rock-solid layout on every tick:
++//   --:-- and 00:00 occupy identical space, colons stay put.
++//
++// Cell width uses gl.width (actual bitmap pixels), not xAdvance.  Per-glyph
++// centering accounts for xOffset (e.g. 28pt '3' has xOffset = -1):
++//   cursor_x = cellStart + (cellW - gl.width) / 2 - gl.xOffset
++//
++// Glyph arrays in MontserratBold.h are in SRAM (no PROGMEM annotation), so
++// ordinary struct reads are safe on all targets.
++// ---------------------------------------------------------------------------
++
++struct FontDigitMetrics {
++  uint8_t cellW;       // fixed cell width = max digit bitmap width
++  uint8_t maxDigitH;   // tallest digit bitmap height
++  int8_t  minYOffset;  // most-negative yOffset among digits (= top of glyph)
++  uint8_t colonW;      // ':' natural xAdvance
++};
++
++static FontDigitMetrics measureDigitMetrics(const GFXfont* font) {
++  FontDigitMetrics m = {};
++  const GFXglyph* glyphs = font->glyph;
++  uint8_t first = font->first;
++  for (char c = '0'; c <= '9'; c++) {
++    const GFXglyph& gl = glyphs[(uint8_t)c - first];
++    if (gl.width > m.cellW) m.cellW = gl.width;
++    if (gl.height > m.maxDigitH) m.maxDigitH = gl.height;
++    if (gl.yOffset < m.minYOffset) m.minYOffset = gl.yOffset;
++  }
++  m.colonW = glyphs[':' - first].xAdvance;
++  return m;
++}
++
++// Cached metrics for the two known Montserrat bitmap fonts.
++static const FontDigitMetrics& cachedMetrics(const GFXfont* font) {
++  static const FontDigitMetrics m28 = measureDigitMetrics(&MontserratBold28pt7b);
++  static const FontDigitMetrics m40 = measureDigitMetrics(&MontserratBold40pt7b);
++  return (font == &MontserratBold40pt7b) ? m40 : m28;
++}
++
++// Total pixel width of a time string under the fixed-cell layout.
++// Digits and dashes use the digit cell; only ':' keeps its natural advance.
++static int fixedTimeWidth(const char* txt, const FontDigitMetrics& m) {
++  int w = 0;
++  for (const char* p = txt; *p; ++p) {
++    if (*p == ':') w += m.colonW;
++    else           w += m.cellW;   // digits, dashes, anything else
++  }
++  return w;
++}
++
++// Render each character in a fixed cell, centered within [areaX .. areaX+areaW).
++// Uses a stable baseline derived from the font's maximum digit ascent.
++static void drawFixedDigits(const char* txt, int yCenter, const GFXfont* font,
++                            uint16_t color, int areaX, int areaW) {
+   Arduino_GFX* g = gfxDev();
+   if (!g || !txt || !txt[0]) return;
+   g->setFont(font);
+-  // Built-in labels use different integer scales. Always reset the scale
+-  // before custom glyphs so the clock cannot randomly grow or shrink after a
+-  // weather/status repaint.
+   g->setTextSize(1);
++  g->setTextWrap(false);
+   g->setTextColor(color);
+-  int16_t x1 = 0, y1 = 0;
+-  uint16_t w = 0, h = 0;
+-  g->getTextBounds((char*)txt, 0, 0, &x1, &y1, &w, &h);
+-  int x = max(0, (240 - (int)w) / 2 - x1);
+-  int baseline = yCenter - ((int)y1 + (int)h / 2);
+-  g->setCursor(x, baseline);
+-  g->print(txt);
++
++  const FontDigitMetrics& m = cachedMetrics(font);
++
++  int totalW = fixedTimeWidth(txt, m);
++  int x = areaX + max(0, (areaW - totalW) / 2);
++
++  // Stable baseline: the visual center of the tallest digit is placed at
++  // yCenter.  minYOffset (negative) gives the ascent above the baseline.
++  int baseline = yCenter - (int)m.minYOffset - (int)m.maxDigitH / 2;
++
++  for (const char* p = txt; *p; ++p) {
++    char ch = *p;
++    const GFXglyph& gl = font->glyph[(uint8_t)ch - font->first];
++
++    if (ch == ':') {
++      // Colon keeps its natural advance; center bitmap within that.
++      int pad = ((int)m.colonW - (int)gl.width) / 2 - (int)gl.xOffset;
++      g->setCursor(x + pad, baseline);
++      g->print(ch);
++      x += m.colonW;
++    } else {
++      // Digits and dashes share the fixed digit cell.
++      int pad = ((int)m.cellW - (int)gl.width) / 2 - (int)gl.xOffset;
++      g->setCursor(x + pad, baseline);
++      g->print(ch);
++      x += m.cellW;
++    }
++  }
+ }
+ 
++// Full-width centered clock digits (theme 0 without seconds, and theme 1).
++static void drawFontCentered(const char* txt, int yCenter, const GFXfont* font, uint16_t color) {
++  drawFixedDigits(txt, yCenter, font, color, 0, 240);
++}
++
++// Clock digits centered inside x=8..164 (theme 0 with seconds visible).
+ static void drawClockFontInReservedArea(const char* text, int yCenter, uint16_t color) {
++  drawFixedDigits(text, yCenter, &MontserratBold28pt7b, color, 8, 156);
++}
++
++// Incremental per-cell redraw: only clears and repaints cells where the
++// character actually changed, within a tight glyph-band rectangle.  Preserves
++// surrounding panel borders, date lines and unchanged digits.  oldTxt and
++// newTxt must be the same length (caller ensures matching placeholder format).
++static void updateFixedDigits(const char* oldTxt, const char* newTxt,
++                              int yCenter, const GFXfont* font,
++                              uint16_t fgColor, uint16_t bgColor,
++                              int areaX, int areaW) {
+   Arduino_GFX* g = gfxDev();
+-  if (!g || !text || !text[0]) return;
+-  const GFXfont* font = &MontserratBold28pt7b;
++  if (!g || !newTxt || !newTxt[0]) return;
++  if (!oldTxt || !oldTxt[0] || strlen(oldTxt) != strlen(newTxt)) {
++    // Length mismatch (shouldn't happen with matching placeholders) — full draw.
++    int bandTop, bandH;
++    {
++      const FontDigitMetrics& m = cachedMetrics(font);
++      int baseline = yCenter - (int)m.minYOffset - (int)m.maxDigitH / 2;
++      bandTop = baseline + (int)m.minYOffset;
++      bandH   = (int)m.maxDigitH;
++    }
++    g->fillRect(areaX, bandTop, areaW, bandH, bgColor);
++    drawFixedDigits(newTxt, yCenter, font, fgColor, areaX, areaW);
++    return;
++  }
++
+   g->setFont(font);
+   g->setTextSize(1);
+-  g->setTextColor(color);
+-  int16_t x1 = 0, y1 = 0;
+-  uint16_t w = 0, h = 0;
+-  g->getTextBounds((char*)text, 0, 0, &x1, &y1, &w, &h);
+-  // The visible glyphs are centered inside x=8..164. The independent seconds
+-  // area starts at x=177, so even the widest HH:MM cannot overlap it.
+-  int visibleX = 8 + max(0, (156 - (int)w) / 2);
+-  int cursorX = visibleX - x1;
+-  int baseline = yCenter - ((int)y1 + (int)h / 2);
+-  g->setCursor(cursorX, baseline);
+-  g->print(text);
++  g->setTextWrap(false);
++
++  const FontDigitMetrics& m = cachedMetrics(font);
++
++  int totalW = fixedTimeWidth(newTxt, m);
++  int x = areaX + max(0, (areaW - totalW) / 2);
++  int baseline = yCenter - (int)m.minYOffset - (int)m.maxDigitH / 2;
++
++  // Tight glyph-band: only clear the pixel rows actually used by glyphs.
++  int bandTop = baseline + (int)m.minYOffset;
++  int bandH   = (int)m.maxDigitH;
++
++  const char* pOld = oldTxt;
++  const char* pNew = newTxt;
++  while (*pNew) {
++    char chOld = *pOld;
++    char chNew = *pNew;
++    bool isColon = (chNew == ':');
++    uint8_t cellW = isColon ? m.colonW : m.cellW;
++
++    if (chOld != chNew) {
++      // Erase just this cell's glyph band.
++      g->fillRect(x, bandTop, (int)cellW, bandH, bgColor);
++
++      // Redraw the new glyph.
++      const GFXglyph& gl = font->glyph[(uint8_t)chNew - font->first];
++      int pad;
++      if (isColon)
++        pad = ((int)m.colonW - (int)gl.width) / 2 - (int)gl.xOffset;
++      else
++        pad = ((int)m.cellW - (int)gl.width) / 2 - (int)gl.xOffset;
++
++      g->setTextColor(fgColor);
++      g->setCursor(x + pad, baseline);
++      g->print(chNew);
++    }
++
++    x += cellW;
++    ++pOld;
++    ++pNew;
++  }
+ }
+ 
+ static const char* compactRepo(const char* repo) {
+@@ -514,22 +656,31 @@ void ClockMode::renderGithubSummary(const Settings& s) {
+ 
+ void ClockMode::renderTimeOnly(const Settings& s, const struct tm& t) {
+   if (s.clock.theme >= 2) return;
++
++  // Format the time string ONCE, shared by both theme 0 and theme 1.
+   char nextTime[16];
+-  if (s.clock.theme == 0) {
+-    int hour = t.tm_hour;
+-    if (!s.clock.format24h) { hour %= 12; if (!hour) hour = 12; }
++  int hour = t.tm_hour;
++  if (!s.clock.format24h) { hour %= 12; if (!hour) hour = 12; }
++  if (s.clock.showSeconds)
++    snprintf(nextTime, sizeof(nextTime), "%02d:%02d:%02d", hour, t.tm_min, t.tm_sec);
++  else
+     snprintf(nextTime, sizeof(nextTime), "%02d:%02d", hour, t.tm_min);
+ 
+-    if (strcmp(nextTime, m_lastTime)) {
+-      Arduino_GFX* g = gfxDev();
++  if (s.clock.theme == 0) {
++    // Theme 0 shows HH:MM in the main area (with or without a separate
++    // seconds display).  Format HH:MM only for the main clock field.
++    char mainTime[8];
++    snprintf(mainTime, sizeof(mainTime), "%02d:%02d", hour, t.tm_min);
++
++    if (strcmp(mainTime, m_lastTime)) {
+       if (s.clock.showSeconds) {
+-        g->fillRect(6, 72, 160, 62, s.clock.bgColor);
+-        drawClockFontInReservedArea(nextTime, 103, s.clock.timeColor);
++        updateFixedDigits(m_lastTime, mainTime, 103, &MontserratBold28pt7b,
++                          s.clock.timeColor, s.clock.bgColor, 8, 156);
+       } else {
+-        g->fillRect(0, 72, 240, 62, s.clock.bgColor);
+-        drawFontCentered(nextTime, 103, &MontserratBold40pt7b, s.clock.timeColor);
++        updateFixedDigits(m_lastTime, mainTime, 103, &MontserratBold40pt7b,
++                          s.clock.timeColor, s.clock.bgColor, 0, 240);
+       }
+-      strlcpy(m_lastTime, nextTime, sizeof(m_lastTime));
++      strlcpy(m_lastTime, mainTime, sizeof(m_lastTime));
+     }
+ 
+     if (s.clock.showSeconds) {
+@@ -542,15 +693,16 @@ void ClockMode::renderTimeOnly(const Settings& s, const struct tm& t) {
+     return;
+   }
+ 
+-  const int centerY = s.clock.theme == 0 ? 116 : 43;
+-  // GFX custom-font text is transparent. Painting the previous glyphs in the
+-  // panel color erases only pixels that changed, avoiding a visible rectangular
+-  // clear and the old full-screen repaint.
+-  uint16_t eraseColor = s.clock.theme == 0 ? s.clock.bgColor : UI_PANEL;
+-  const GFXfont* font = clockTimeFont(s);
+-  if (m_lastTime[0]) drawFontCentered(m_lastTime, centerY, font, eraseColor);
+-  drawFontCentered(nextTime, centerY, font, s.clock.timeColor);
+-  strlcpy(m_lastTime, nextTime, sizeof(m_lastTime));
++  // Theme 1: per-cell incremental update within the panel (y=6..84).
++  // Only changed character cells are cleared and redrawn in the tight
++  // glyph band — the rounded panel border and date line are preserved.
++  if (strcmp(nextTime, m_lastTime)) {
++    const int centerY = 43;
++    const GFXfont* font = clockTimeFont(s);
++    updateFixedDigits(m_lastTime, nextTime, centerY, font,
++                      s.clock.timeColor, UI_PANEL, 0, 240);
++    strlcpy(m_lastTime, nextTime, sizeof(m_lastTime));
++  }
+ }
+ 
+ void ClockMode::render(const Settings& s) {
+@@ -562,7 +714,8 @@ void ClockMode::render(const Settings& s) {
+ 
+   struct tm t;
+   bool timeOk = clockNow(t);
+-  char timeStr[16] = "--:--";
++  char timeStr[16];
++  strlcpy(timeStr, s.clock.showSeconds ? "--:--:--" : "--:--", sizeof(timeStr));
+   char dateStr[28] = "SYNCING CLOCK";
+   if (timeOk) {
+     formatClockTime(t, s, timeStr, sizeof(timeStr));
+@@ -638,9 +791,9 @@ void ClockMode::render(const Settings& s) {
+       fitUpper(m_weather.description, desc, sizeof(desc), 20);
+       gfxPrint(14, 100, city, UI_WHITE, 2);
+       drawWeatherMark(206, 112, m_weather.weatherCode, ac);
+-      gfxPrint(14, 127, temp, tc, 3);
+-      gfxPrint(122, 132, humid, dc, 1);
+-      gfxPrint(14, 163, desc, UI_MUTED, 1);
++      gfxPrint(14, 126, temp, tc, 3);
++      gfxPrint(14, 158, humid, dc, 2);
++      gfxPrint(14, 178, desc, UI_MUTED, 1);
+     } else {
+       gfxDrawCentered("WEATHER UNAVAILABLE", 119, 2, ac);
+       gfxDrawCentered(m_weather.error.length() ? m_weather.error.c_str() : "Connecting", 153, 1, UI_MUTED);
